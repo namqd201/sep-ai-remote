@@ -42,8 +42,9 @@ export class AntigravityAdapter implements IAntigravityAdapter {
     this.dbPath = path.join(config.antigravityAppDataDir, 'conversation_summaries.db');
   }
 
-  public setActiveTaskForSession(sessionId: string, taskId: string, title: string): void {
-    this.activeTaskBySession.set(sessionId, { taskId, title });
+  public setActiveTaskForSession(sessionId: string, taskId: string, title?: string): void {
+    const existing = this.activeTaskBySession.get(sessionId);
+    this.activeTaskBySession.set(sessionId, { taskId, title: title || existing?.title || 'Task' });
   }
 
   public getActiveTaskForSession(sessionId: string): { taskId: string; title: string } | undefined {
@@ -541,6 +542,118 @@ export class AntigravityAdapter implements IAntigravityAdapter {
   }
 
   /**
+   * Kiểm tra xem bước cuối của Antigravity có đang chờ xác nhận đề xuất / câu hỏi từ người dùng không
+   */
+  public checkForConfirmationRequest(sessionId: string): {
+    needsConfirmation: boolean;
+    proposalText?: string;
+  } {
+    const transcriptPath = path.join(
+      config.antigravityAppDataDir,
+      'brain',
+      sessionId,
+      '.system_generated',
+      'logs',
+      'transcript.jsonl'
+    );
+
+    if (!fs.existsSync(transcriptPath)) {
+      return { needsConfirmation: false };
+    }
+
+    try {
+      const content = fs.readFileSync(transcriptPath, 'utf-8');
+      const lines = content.trim().split('\n');
+      if (lines.length === 0) return { needsConfirmation: false };
+
+      // Tìm bước gần nhất từ MODEL / PLANNER_RESPONSE
+      let lastModelStep: any = null;
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        try {
+          const step = JSON.parse(line);
+          if (step.source === 'USER_EXPLICIT' || step.type === 'USER_INPUT') {
+            return { needsConfirmation: false };
+          }
+          if (step.source === 'MODEL' || step.type === 'PLANNER_RESPONSE') {
+            lastModelStep = step;
+            break;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!lastModelStep) return { needsConfirmation: false };
+
+      // 1. Kiểm tra tool call ask_question
+      let hasAskQuestion = false;
+      let askQuestionDetails = '';
+      if (lastModelStep.tool_calls && Array.isArray(lastModelStep.tool_calls)) {
+        for (const call of lastModelStep.tool_calls) {
+          if (call.name === 'ask_question') {
+            hasAskQuestion = true;
+            if (call.args?.questions && Array.isArray(call.args.questions)) {
+              askQuestionDetails = call.args.questions
+                .map((q: any) => {
+                  const opts = Array.isArray(q.options)
+                    ? q.options.map((o: string, idx: number) => `  ${idx + 1}. ${o}`).join('\n')
+                    : '';
+                  return `${q.question || ''}\n${opts}`.trim();
+                })
+                .join('\n\n');
+            }
+          }
+        }
+      }
+
+      const text = (lastModelStep.content || '').trim();
+
+      if (hasAskQuestion) {
+        const proposal = [text, askQuestionDetails].filter(Boolean).join('\n\n');
+        return {
+          needsConfirmation: true,
+          proposalText: proposal || 'Antigravity đang chờ xác nhận câu hỏi từ Sếp.'
+        };
+      }
+
+      // 2. Kiểm tra nếu bước cuối không còn tool nào đang chờ chạy và có nội dung hỏi ý kiến/đề xuất
+      const hasOtherTools =
+        lastModelStep.tool_calls &&
+        Array.isArray(lastModelStep.tool_calls) &&
+        lastModelStep.tool_calls.length > 0;
+
+      if (!hasOtherTools && text.length > 0) {
+        const confirmationPatterns = [
+          /\?|？/,
+          /\b(confirm|xác nhận|đồng ý|đề xuất|phương án|lựa chọn|cho ý kiến|duyệt)\b/i,
+          /\b(bạn có muốn|anh có muốn|sếp có muốn|bạn thấy sao|bạn nghĩ sao|tiếp tục không)\b/i,
+          /\b(should i|would you like|do you want|please confirm|proceed with|approve)\b/i
+        ];
+
+        const isAskingConfirmation = confirmationPatterns.some((pattern) => pattern.test(text));
+
+        const isPureCompletion =
+          /\b(đã hoàn thành|hoàn tất nhiệm vụ|đã hoàn thành xong task|đã làm xong)\b/i.test(text) &&
+          !/\b(đề xuất|chọn phương án|bạn muốn chọn|bạn chọn cách nào|sếp xem xét)\b/i.test(text);
+
+        if (isAskingConfirmation && !isPureCompletion) {
+          return {
+            needsConfirmation: true,
+            proposalText: text
+          };
+        }
+      }
+
+      return { needsConfirmation: false };
+    } catch (err) {
+      console.warn('[Adapter] Lỗi kiểm tra confirmation request:', err);
+      return { needsConfirmation: false };
+    }
+  }
+
+  /**
    * Phương thức gọi khi HookServer nhận được sự kiện Stop trực tiếp từ Antigravity
    */
   public handleDirectHookStop(payload: {
@@ -553,6 +666,27 @@ export class AntigravityAdapter implements IAntigravityAdapter {
     console.log(`[Adapter] Nhận trực tiếp Stop Hook từ Antigravity cho session: ${sessionId}`);
 
     const activeInfo = this.activeTaskBySession.get(sessionId);
+
+    // Kiểm tra xem Antigravity có đang chờ Sếp xác nhận đề xuất không
+    const confirmCheck = this.checkForConfirmationRequest(sessionId);
+    if (confirmCheck.needsConfirmation && !payload.error) {
+      console.log(`[Adapter] Phát hiện yêu cầu xác nhận/đề xuất trên session ${sessionId}`);
+      const event: TaskEvent = {
+        taskId: activeInfo?.taskId,
+        sessionId,
+        type: 'needs_confirmation',
+        status: TaskStatus.RUNNING,
+        needsConfirmation: true,
+        proposalText: confirmCheck.proposalText,
+        ttsVoiceText: 'sếp ơi, em có đề xuất xử lý task như này ạ. Sếp vào đọc và confirm giúp em để em làm nhé',
+        timestamp: getVietnamNowIso()
+      };
+
+      for (const sub of this.subscribers) {
+        sub(event);
+      }
+      return;
+    }
 
     this.getTaskReport(sessionId).then((report) => {
       if (payload.error) {
@@ -588,31 +722,51 @@ export class AntigravityAdapter implements IAntigravityAdapter {
           const currentNotFullyIdle = session.isNotFullyIdle;
 
           if (prev) {
-            // Phát hiện chuyển từ RUNNING sang IDLE -> Task hoàn thành!
+            // Phát hiện chuyển từ RUNNING sang IDLE
             if (
               (prev.status === SessionStatus.RUNNING || prev.notFullyIdle) &&
               currentStatus === SessionStatus.IDLE &&
               !currentNotFullyIdle
             ) {
-              console.log(`[Adapter] Phát hiện task hoàn thành trên session ${session.sessionId}`);
               const activeInfo = this.activeTaskBySession.get(session.sessionId);
-              const report = await this.getTaskReport(session.sessionId);
+              const confirmCheck = this.checkForConfirmationRequest(session.sessionId);
 
-              const event: TaskEvent = {
-                taskId: activeInfo?.taskId,
-                sessionId: session.sessionId,
-                type: 'completed',
-                status: TaskStatus.COMPLETED,
-                report,
-                timestamp: getVietnamNowIso()
-              };
+              if (confirmCheck.needsConfirmation) {
+                console.log(`[Adapter] Phát hiện yêu cầu xác nhận/đề xuất trên session ${session.sessionId}`);
+                const event: TaskEvent = {
+                  taskId: activeInfo?.taskId,
+                  sessionId: session.sessionId,
+                  type: 'needs_confirmation',
+                  status: TaskStatus.RUNNING,
+                  needsConfirmation: true,
+                  proposalText: confirmCheck.proposalText,
+                  ttsVoiceText: 'sếp ơi, em có đề xuất xử lý task như này ạ. Sếp vào đọc và confirm giúp em để em làm nhé',
+                  timestamp: getVietnamNowIso()
+                };
 
-              this.clearActiveTaskForSession(session.sessionId);
-              this.lastLiveStepCountBySession.delete(session.sessionId);
-              this.lastActionTextBySession.delete(session.sessionId);
+                for (const sub of this.subscribers) {
+                  sub(event);
+                }
+              } else {
+                console.log(`[Adapter] Phát hiện task hoàn thành trên session ${session.sessionId}`);
+                const report = await this.getTaskReport(session.sessionId);
 
-              for (const sub of this.subscribers) {
-                sub(event);
+                const event: TaskEvent = {
+                  taskId: activeInfo?.taskId,
+                  sessionId: session.sessionId,
+                  type: 'completed',
+                  status: TaskStatus.COMPLETED,
+                  report,
+                  timestamp: getVietnamNowIso()
+                };
+
+                this.clearActiveTaskForSession(session.sessionId);
+                this.lastLiveStepCountBySession.delete(session.sessionId);
+                this.lastActionTextBySession.delete(session.sessionId);
+
+                for (const sub of this.subscribers) {
+                  sub(event);
+                }
               }
             } else if (
               prev.status === SessionStatus.IDLE &&

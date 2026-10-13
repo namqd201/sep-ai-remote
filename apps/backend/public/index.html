@@ -1804,6 +1804,18 @@
         playVoiceNotification(ttsText);
       }
       showVoiceToast(taskTitle, ttsText, true);
+    } else if (msg.event === 'task_needs_confirmation') {
+      fetchTasks();
+      const taskTitle = msg.payload.title || '';
+      const fallbackVoice = 'sếp ơi, em có đề xuất xử lý task như này ạ. Sếp vào đọc và confirm giúp em để em làm nhé';
+      const ttsText = msg.payload.ttsVoiceText || fallbackVoice;
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVoiceNotification(ttsText);
+      }
+      showVoiceToast('Cần Sếp xác nhận', ttsText, false);
+      if (state.currentOpenTaskId === msg.payload.taskId) {
+        openDetailModal(msg.payload.taskId);
+      }
     }
   }
 
@@ -2068,14 +2080,25 @@
     const makeTaskHtml = (t) => {
       const isWaiting = t.status === 'PENDING' || t.status === 'QUEUED_OFFLINE';
       const isRunning = t.status === 'RUNNING';
-      const statusLabel = t.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (t.status === 'QUEUED_OFFLINE' ? '⏳ HÀNG ĐỢI OFFLINE' : (isRunning ? '⚡ ĐANG CHẠY' : t.status));
+      let statusLabel = t.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (t.status === 'QUEUED_OFFLINE' ? '⏳ HÀNG ĐỢI OFFLINE' : (isRunning ? '⚡ ĐANG CHẠY' : t.status));
+      let pillClass = `pill-${t.status}`;
+      if (t.needsConfirmation) {
+        statusLabel = '💡 CẦN XÁC NHẬN';
+        pillClass = 'pill-WAITING_APPROVAL';
+      }
       return `
         <div class="card task-item" onclick="openDetailModal('${t.id}')">
           <div class="task-header">
             <div class="task-title">${t.title}</div>
-            <span class="pill pill-${t.status}">${statusLabel}</span>
+            <span class="pill ${pillClass}">${statusLabel}</span>
           </div>
           <div class="task-prompt">${t.prompt}</div>
+          ${t.needsConfirmation ? `
+            <div style="margin: 8px 0; padding: 7px 10px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; font-size: 0.8rem; color: #FBBF24; display: flex; align-items: center; gap: 8px;">
+              <span>💡</span>
+              <span style="font-weight: 600;">Có đề xuất từ Agent cần Sếp duyệt/từ chối!</span>
+            </div>
+          ` : ''}
           ${isRunning ? `
             <div id="task-card-live-${t.id}" style="margin: 8px 0; padding: 7px 10px; background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.3); border-radius: 8px; font-size: 0.78rem; color: #67E8F9; display: flex; align-items: center; gap: 8px;">
               <span class="live-dot-pulse"></span>
@@ -2284,10 +2307,52 @@
       `;
     }
 
+    let proposalCardHtml = '';
+    if (task.needsConfirmation || (isRunning && task.proposalText)) {
+      proposalCardHtml = `
+        <div class="proposal-card" style="background: rgba(245, 158, 11, 0.12); border: 1.5px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 14px; margin: 12px 0;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="font-weight: 700; color: #FBBF24; display: flex; align-items: center; gap: 6px; font-size: 0.92rem;">
+              <span>💡</span> <span>ĐỀ XUẤT CỦA ANTIGRAVITY ĐANG CHỜ SẾP</span>
+            </div>
+            <span class="live-dot-pulse" style="background: #F59E0B; box-shadow: 0 0 8px #F59E0B;"></span>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; line-height: 1.5; color: #F1F5F9; white-space: pre-wrap; max-height: 220px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08);">${task.proposalText || 'Antigravity có đề xuất/câu hỏi cần Sếp cho ý kiến trước khi làm tiếp.'}</div>
+          
+          <div id="proposal-action-buttons" style="display: flex; gap: 10px; margin-top: 12px;">
+            <button class="btn" onclick="selectProposalDecision('${task.id}', 'confirm')" style="flex: 1; background: #059669; color: white; padding: 10px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.88rem;">
+              ✅ Đồng ý (Confirm)
+            </button>
+            <button class="btn" onclick="selectProposalDecision('${task.id}', 'reject')" style="flex: 1; background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 10px; font-weight: 600; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.88rem;">
+              ❌ Từ chối (Reject)
+            </button>
+          </div>
+
+          <div id="proposal-feedback-box" style="display: none; margin-top: 12px; background: rgba(0,0,0,0.35); border-radius: 8px; padding: 12px; border: 1px solid rgba(255,255,255,0.12);">
+            <div id="proposal-feedback-prompt" style="font-size: 0.85rem; font-weight: 600; color: #F1F5F9; margin-bottom: 6px;">
+              Ý kiến / chỉ đạo bổ sung của Sếp:
+            </div>
+            <textarea id="proposal-feedback-input" class="input" style="width: 100%; min-height: 70px; resize: vertical; font-size: 0.88rem; padding: 8px; border-radius: 6px; box-sizing: border-box; background: var(--bg); color: var(--text);" placeholder="Nhập ghi chú hoặc yêu cầu cụ thể (có thể để trống)..."></textarea>
+            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+              <button class="btn" onclick="cancelProposalDecision()" style="background: rgba(255,255,255,0.1); color: var(--text-muted); padding: 6px 12px; font-size: 0.82rem; border-radius: 6px; border: none; cursor: pointer;">
+                Hủy
+              </button>
+              <button id="proposal-submit-btn" class="btn" onclick="submitProposalResponse('${task.id}')" style="background: var(--primary); color: white; padding: 6px 16px; font-weight: 600; font-size: 0.85rem; border-radius: 6px; border: none; cursor: pointer;">
+                🚀 Gửi chỉ đạo cho Agent
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const pillClass = task.needsConfirmation ? 'pill-WAITING_APPROVAL' : `pill-${task.status}`;
+    const statusText = task.needsConfirmation ? '💡 CẦN SẾP XÁC NHẬN' : (task.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (isRunning ? '⚡ ĐANG CHẠY' : task.status));
+
     cont.innerHTML = `
       <div style="margin-bottom: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="pill pill-${task.status}">${task.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (isRunning ? '⚡ ĐANG CHẠY' : task.status)}</span>
+          <span class="pill ${pillClass}">${statusText}</span>
           <span style="font-size: 0.75rem; color: var(--accent); font-weight: 600;">🇻🇳 Giờ VN (GMT+7)</span>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px;">
@@ -2297,6 +2362,7 @@
         <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">Yêu cầu:</div>
         <div style="font-size: 0.95rem; line-height: 1.4;">${task.prompt}</div>
         ${attachHtml}
+        ${proposalCardHtml}
         ${isWaiting ? `
           <div style="display: flex; gap: 10px; margin-top: 16px;">
             <button class="btn" onclick="closeDetailModal(); executeTaskById('${task.id}')" style="flex: 1; background: var(--primary); padding: 10px; font-size: 0.9rem;">
@@ -2325,6 +2391,72 @@
       }, 1000);
       const stepsListEl = document.getElementById('modal-live-steps-list');
       if (stepsListEl) stepsListEl.scrollTop = stepsListEl.scrollHeight;
+    }
+  }
+
+  let selectedProposalDecision = null;
+  function selectProposalDecision(taskId, decision) {
+    selectedProposalDecision = decision;
+    const box = document.getElementById('proposal-feedback-box');
+    const promptEl = document.getElementById('proposal-feedback-prompt');
+    const inputEl = document.getElementById('proposal-feedback-input');
+    const submitBtn = document.getElementById('proposal-submit-btn');
+    if (!box) return;
+
+    box.style.display = 'block';
+    if (decision === 'confirm') {
+      promptEl.innerHTML = '✅ <span style="color: #34D399;">Sếp chọn ĐỒNG Ý</span> — Ghi chú bổ sung (nếu có):';
+      inputEl.placeholder = 'Ví dụ: Triển khai theo phương án 1 nhé em... (hoặc để trống để làm ngay)';
+      submitBtn.style.background = '#059669';
+      submitBtn.innerHTML = '🚀 Xác nhận & Cho phép làm tiếp';
+    } else {
+      promptEl.innerHTML = '❌ <span style="color: #F87171;">Sếp chọn TỪ CHỐI</span> — Chỉ đạo hướng xử lý khác cho Agent:';
+      inputEl.placeholder = 'Ví dụ: Không dùng cách này, hãy đổi sang phương án khác...';
+      submitBtn.style.background = '#DC2626';
+      submitBtn.innerHTML = '🛑 Gửi từ chối & Yêu cầu làm lại';
+    }
+    inputEl.focus();
+  }
+
+  function cancelProposalDecision() {
+    selectedProposalDecision = null;
+    const box = document.getElementById('proposal-feedback-box');
+    if (box) box.style.display = 'none';
+  }
+
+  async function submitProposalResponse(taskId) {
+    if (!selectedProposalDecision) return;
+    const inputEl = document.getElementById('proposal-feedback-input');
+    const feedbackText = inputEl ? inputEl.value.trim() : '';
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({
+          action: selectedProposalDecision,
+          feedbackText
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showVoiceToast('Lỗi phản hồi', data.message || 'Không thể gửi phản hồi', true);
+        return;
+      }
+      showVoiceToast('Đã gửi chỉ đạo', 'Đã chuyển chỉ đạo của Sếp tới Antigravity!', false);
+      const voiceMsg = selectedProposalDecision === 'confirm'
+        ? 'Dạ em nhận được xác nhận của Sếp rồi ạ, em đang tiếp tục triển khai ngay!'
+        : 'Dạ em nhận được chỉ đạo của Sếp rồi ạ, em sẽ điều chỉnh lại ngay!';
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(voiceMsg);
+      }
+      closeDetailModal();
+      fetchTasks();
+    } catch (e) {
+      showVoiceToast('Lỗi', e.message, true);
     }
   }
 

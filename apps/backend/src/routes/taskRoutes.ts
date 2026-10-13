@@ -93,4 +93,20 @@ router.get('/:id', allowLocalOrAuth, (req, res) => {
   res.json({ success: true, task });
 });
 
+// 8. Phản hồi xác nhận hoặc từ chối đề xuất của Antigravity (Confirm / Reject Proposal)
+router.post('/:id/respond', allowLocalOrAuth, async (req: Request, res: Response) => {
+  const { action, feedbackText } = req.body as { action: 'confirm' | 'reject'; feedbackText?: string };
+  if (!action || (action !== 'confirm' && action !== 'reject')) {
+    res.status(400).json({ error: 'Hành động phản hồi phải là confirm hoặc reject' });
+    return;
+  }
+
+  const result = await taskService.respondToProposal(req.params.id, action, feedbackText);
+  if (!result.success) {
+    res.status(400).json(result);
+    return;
+  }
+  res.json(result);
+});
+
 export default router;

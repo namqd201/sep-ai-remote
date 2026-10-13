@@ -56,6 +56,8 @@ export interface Task {
   priority?: number;
   liveSteps?: TaskLiveStep[];
   currentActionText?: string;
+  needsConfirmation?: boolean;
+  proposalText?: string;
 }
 
 export interface CreateTaskDto {
@@ -74,9 +76,12 @@ export interface CreateTaskDto {
 export interface TaskEvent {
   taskId?: string;
   sessionId: string;
-  type: 'status_changed' | 'tool_executed' | 'completed' | 'failed' | 'waiting_approval';
+  type: 'status_changed' | 'tool_executed' | 'completed' | 'failed' | 'waiting_approval' | 'needs_confirmation';
   status: TaskStatus;
   details?: Record<string, unknown>;
   report?: TaskReport;
   timestamp: string;
+  needsConfirmation?: boolean;
+  proposalText?: string;
+  ttsVoiceText?: string;
 }

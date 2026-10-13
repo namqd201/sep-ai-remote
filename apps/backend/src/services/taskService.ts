@@ -19,10 +19,15 @@ import {
 export class TaskService {
   private isPcOnline = false;
   private bridgeDispatcher?: (task: Task) => boolean;
+  private bridgeDirectiveSender?: (sessionId: string, message: string, taskId?: string) => boolean;
   private wsBroadcaster?: (event: string, payload: unknown) => void;
 
   public setBridgeDispatcher(dispatcher: (task: Task) => boolean): void {
     this.bridgeDispatcher = dispatcher;
+  }
+
+  public setBridgeDirectiveSender(sender: (sessionId: string, message: string, taskId?: string) => boolean): void {
+    this.bridgeDirectiveSender = sender;
   }
 
   public setWsBroadcaster(broadcaster: (event: string, payload: unknown) => void): void {
@@ -149,7 +154,10 @@ export class TaskService {
     taskId: string,
     status: TaskStatus,
     report?: TaskReport,
-    sessionId?: string
+    sessionId?: string,
+    needsConfirmation?: boolean,
+    proposalText?: string,
+    ttsVoiceText?: string
   ): Task | null {
     const task = db.getTask(taskId);
     if (!task) return null;
@@ -159,7 +167,29 @@ export class TaskService {
     task.updatedAt = now;
     if (sessionId) task.sessionId = sessionId;
 
-    if (report) {
+    if (needsConfirmation) {
+      task.needsConfirmation = true;
+      task.proposalText = proposalText;
+      task.currentActionText = 'Đang chờ Sếp Nam xác nhận đề xuất...';
+
+      const voiceText =
+        ttsVoiceText ||
+        'sếp ơi, em có đề xuất xử lý task như này ạ. Sếp vào đọc và confirm giúp em để em làm nhé';
+
+      telegramService.sendVoiceNotification(voiceText, task.title).catch((err) => {
+        console.warn('[TaskService] Gửi voice Telegram thất bại:', err);
+      });
+
+      if (this.wsBroadcaster) {
+        this.wsBroadcaster('task_needs_confirmation', {
+          taskId: task.id,
+          sessionId: task.sessionId,
+          title: task.title,
+          proposalText,
+          ttsVoiceText: voiceText
+        });
+      }
+    } else if (report) {
       task.report = report;
     }
 
@@ -367,6 +397,64 @@ export class TaskService {
       this.wsBroadcaster('task_deleted', { id: taskId });
     }
     return ok;
+  }
+
+  public async respondToProposal(
+    taskId: string,
+    action: 'confirm' | 'reject',
+    feedbackText?: string
+  ): Promise<{ success: boolean; task?: Task; message?: string }> {
+    const task = db.getTask(taskId);
+    if (!task) {
+      return { success: false, message: 'Task không tồn tại' };
+    }
+
+    const sessionId = task.sessionId;
+    if (!sessionId) {
+      return { success: false, message: 'Task không có session Antigravity liên kết' };
+    }
+
+    const now = getVietnamNowIso();
+    task.needsConfirmation = false;
+    task.status = TaskStatus.RUNNING;
+    task.updatedAt = now;
+    task.currentActionText =
+      action === 'confirm'
+        ? 'Đang thực hiện theo xác nhận của Sếp'
+        : 'Đang điều chỉnh theo chỉ đạo của Sếp';
+    db.saveTask(task);
+
+    let directivePrompt = '';
+    if (action === 'confirm') {
+      directivePrompt = `[CHỈ ĐẠO TỪ SẾP NAM - ĐÃ XÁC NHẬN / CONFIRMED]:\nSếp Nam đã đồng ý với đề xuất của bạn. Hãy tiếp tục triển khai ngay!`;
+      if (feedbackText && feedbackText.trim()) {
+        directivePrompt += `\n\nÝ kiến bổ sung của Sếp: ${feedbackText.trim()}`;
+      }
+    } else {
+      directivePrompt = `[CHỈ ĐẠO TỪ SẾP NAM - TỪ CHỐI / REJECTED]:\nSếp Nam không đồng ý với phương án/đề xuất này.`;
+      if (feedbackText && feedbackText.trim()) {
+        directivePrompt += `\n\nChỉ đạo cụ thể của Sếp: ${feedbackText.trim()}`;
+      } else {
+        directivePrompt += `\nHãy dừng phương án này và đề xuất giải pháp khác phù hợp hơn.`;
+      }
+    }
+
+    if (this.bridgeDirectiveSender) {
+      this.bridgeDirectiveSender(sessionId, directivePrompt, task.id);
+    }
+
+    if (this.wsBroadcaster) {
+      this.wsBroadcaster('task_updated', task);
+    }
+
+    return {
+      success: true,
+      task,
+      message:
+        action === 'confirm'
+          ? 'Đã gửi xác nhận đồng ý cho Antigravity'
+          : 'Đã gửi từ chối và chỉ đạo cho Antigravity'
+    };
   }
 }
 

@@ -18,11 +18,13 @@ var WsEventType;
     // Task Events
     WsEventType["NEW_TASK"] = "new_task";
     WsEventType["DISPATCH_TASK"] = "dispatch_task";
+    WsEventType["SEND_DIRECTIVE"] = "send_directive";
     WsEventType["TASK_STATUS_UPDATED"] = "task_status_updated";
     WsEventType["TASK_LIVE_STEPS"] = "task_live_steps";
     WsEventType["TASK_COMPLETED"] = "task_completed";
     WsEventType["TASK_FAILED"] = "task_failed";
     WsEventType["APPROVAL_REQUIRED"] = "approval_required";
+    WsEventType["TASK_NEEDS_CONFIRMATION"] = "task_needs_confirmation";
     // Chat/Interaction
     WsEventType["CHAT_MESSAGE"] = "chat_message";
     WsEventType["NOTIFICATION"] = "notification";

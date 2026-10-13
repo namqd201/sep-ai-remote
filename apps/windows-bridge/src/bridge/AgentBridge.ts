@@ -155,6 +155,22 @@ export class AgentBridge {
         break;
       }
 
+      case WsEventType.SEND_DIRECTIVE: {
+        const payload = msg.payload as { sessionId: string; message: string; taskId?: string };
+        console.log(`[Bridge] Nhận chỉ đạo từ Sếp gửi tới session ${payload.sessionId}: ${payload.message.substring(0, 60)}...`);
+        if (payload.taskId) {
+          antigravityAdapter.setActiveTaskForSession(payload.sessionId, payload.taskId);
+        }
+        antigravityAdapter.sendMessageToSession(payload.sessionId, payload.message).then((res) => {
+          if (!res.success) {
+            console.error(`[Bridge] Gửi chỉ đạo tới session ${payload.sessionId} thất bại:`, res.error);
+          } else {
+            console.log(`[Bridge] Đã gửi chỉ đạo tới session ${payload.sessionId} thành công!`);
+          }
+        });
+        break;
+      }
+
       case WsEventType.PING: {
         this.sendWsMessage({
           event: WsEventType.PONG,

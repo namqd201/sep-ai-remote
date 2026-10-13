@@ -21,6 +21,7 @@ export class WsGateway {
         this.wss = new WebSocketServer({ server, path: '/ws' });
         // Cấu hình dispatcher cho taskService
         taskService.setBridgeDispatcher((task) => this.dispatchTaskToBridge(task));
+        taskService.setBridgeDirectiveSender((sessionId, message, taskId) => this.sendDirectiveToBridge(sessionId, message, taskId));
         taskService.setWsBroadcaster((event, payload) => {
             this.broadcastToMobile({
                 event: event,
@@ -166,7 +167,7 @@ export class WsGateway {
                         }
                     }
                     if (targetTaskId) {
-                        taskService.updateTaskFromBridge(targetTaskId, taskEvent.status, taskEvent.report, taskEvent.sessionId);
+                        taskService.updateTaskFromBridge(targetTaskId, taskEvent.status, taskEvent.report, taskEvent.sessionId, taskEvent.needsConfirmation, taskEvent.proposalText, taskEvent.ttsVoiceText);
                     }
                 }
                 break;
@@ -208,6 +209,17 @@ export class WsGateway {
         this.bridgeSocket.send(JSON.stringify({
             event: WsEventType.DISPATCH_TASK,
             payload: task,
+            timestamp: new Date().toISOString()
+        }));
+        return true;
+    }
+    sendDirectiveToBridge(sessionId, message, taskId) {
+        if (!this.bridgeSocket || this.bridgeSocket.readyState !== WebSocket.OPEN) {
+            return false;
+        }
+        this.bridgeSocket.send(JSON.stringify({
+            event: WsEventType.SEND_DIRECTIVE,
+            payload: { sessionId, message, taskId },
             timestamp: new Date().toISOString()
         }));
         return true;

@@ -41,6 +41,9 @@ export class WsGateway {
 
     // Cấu hình dispatcher cho taskService
     taskService.setBridgeDispatcher((task: Task) => this.dispatchTaskToBridge(task));
+    taskService.setBridgeDirectiveSender((sessionId: string, message: string, taskId?: string) =>
+      this.sendDirectiveToBridge(sessionId, message, taskId)
+    );
     taskService.setWsBroadcaster((event: string, payload: unknown) => {
       this.broadcastToMobile({
         event: event as WsEventType,
@@ -230,7 +233,10 @@ export class WsGateway {
               targetTaskId,
               taskEvent.status,
               taskEvent.report,
-              taskEvent.sessionId
+              taskEvent.sessionId,
+              taskEvent.needsConfirmation,
+              taskEvent.proposalText,
+              taskEvent.ttsVoiceText
             );
           }
         }
@@ -279,6 +285,21 @@ export class WsGateway {
       JSON.stringify({
         event: WsEventType.DISPATCH_TASK,
         payload: task,
+        timestamp: new Date().toISOString()
+      })
+    );
+    return true;
+  }
+
+  public sendDirectiveToBridge(sessionId: string, message: string, taskId?: string): boolean {
+    if (!this.bridgeSocket || this.bridgeSocket.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+
+    this.bridgeSocket.send(
+      JSON.stringify({
+        event: WsEventType.SEND_DIRECTIVE,
+        payload: { sessionId, message, taskId },
         timestamp: new Date().toISOString()
       })
     );

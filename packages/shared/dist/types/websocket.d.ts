@@ -11,11 +11,13 @@ export declare enum WsEventType {
     REPORT_READY = "report_ready",
     NEW_TASK = "new_task",
     DISPATCH_TASK = "dispatch_task",
+    SEND_DIRECTIVE = "send_directive",
     TASK_STATUS_UPDATED = "task_status_updated",
     TASK_LIVE_STEPS = "task_live_steps",
     TASK_COMPLETED = "task_completed",
     TASK_FAILED = "task_failed",
     APPROVAL_REQUIRED = "approval_required",
+    TASK_NEEDS_CONFIRMATION = "task_needs_confirmation",
     CHAT_MESSAGE = "chat_message",
     NOTIFICATION = "notification"
 }
