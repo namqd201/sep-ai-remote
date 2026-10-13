@@ -246,6 +246,30 @@ export class TaskService {
     return task;
   }
 
+  public updateLiveSteps(
+    taskId?: string,
+    sessionId?: string,
+    liveSteps?: import('@sep-ai/shared').TaskLiveStep[],
+    currentActionText?: string
+  ): Task | null {
+    let task: Task | null = null;
+    if (taskId) {
+      task = db.getTask(taskId);
+    }
+    if (!task && sessionId) {
+      task = this.getActiveTaskForSession(sessionId);
+    }
+
+    if (task) {
+      task.liveSteps = liveSteps || [];
+      task.currentActionText = currentActionText || '';
+      task.updatedAt = getVietnamNowIso();
+      db.saveTask(task);
+    }
+
+    return task;
+  }
+
   public flushOfflineQueue(): void {
     if (!this.isPcOnline || !this.bridgeDispatcher) return;
 

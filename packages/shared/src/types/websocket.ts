@@ -22,6 +22,7 @@ export enum WsEventType {
   NEW_TASK = 'new_task',
   DISPATCH_TASK = 'dispatch_task',
   TASK_STATUS_UPDATED = 'task_status_updated',
+  TASK_LIVE_STEPS = 'task_live_steps',
   TASK_COMPLETED = 'task_completed',
   TASK_FAILED = 'task_failed',
   APPROVAL_REQUIRED = 'approval_required',
@@ -35,6 +36,13 @@ export interface WsMessage<T = unknown> {
   event: WsEventType;
   payload: T;
   timestamp: string;
+}
+
+export interface TaskLiveStepsPayload {
+  taskId: string;
+  sessionId: string;
+  liveSteps: import('./task.js').TaskLiveStep[];
+  currentActionText: string;
 }
 
 export interface TaskCompletedPayload {

@@ -13,6 +13,7 @@ import {
   TaskReport,
   TaskStatus,
   TaskEvent,
+  TaskLiveStep,
   DEFAULT_TTS_COMPLETION_PHRASE,
   getVietnamNowIso,
   getTaskCompletionVoiceText
@@ -23,6 +24,16 @@ const execFileAsync = promisify(execFile);
 export class AntigravityAdapter implements IAntigravityAdapter {
   private dbPath: string;
   private subscribers: Set<(event: TaskEvent) => void> = new Set();
+  private liveSubscribers: Set<
+    (data: {
+      taskId?: string;
+      sessionId: string;
+      liveSteps: TaskLiveStep[];
+      currentActionText: string;
+    }) => void
+  > = new Set();
+  private lastLiveStepCountBySession: Map<string, number> = new Map();
+  private lastActionTextBySession: Map<string, string> = new Map();
   private sessionStateCache: Map<string, { status: string; notFullyIdle: boolean }> = new Map();
   private activeTaskBySession: Map<string, { taskId: string; title: string }> = new Map();
   private pollTimer: NodeJS.Timeout | null = null;
@@ -398,11 +409,135 @@ export class AntigravityAdapter implements IAntigravityAdapter {
 
     return () => {
       this.subscribers.delete(callback);
-      if (this.subscribers.size === 0 && this.pollTimer) {
+      if (this.subscribers.size === 0 && this.liveSubscribers.size === 0 && this.pollTimer) {
         clearInterval(this.pollTimer);
         this.pollTimer = null;
       }
     };
+  }
+
+  public subscribeToLiveSteps(
+    callback: (data: {
+      taskId?: string;
+      sessionId: string;
+      liveSteps: TaskLiveStep[];
+      currentActionText: string;
+    }) => void
+  ): () => void {
+    this.liveSubscribers.add(callback);
+
+    if (!this.pollTimer) {
+      this.startPollingObserver();
+    }
+
+    return () => {
+      this.liveSubscribers.delete(callback);
+      if (this.subscribers.size === 0 && this.liveSubscribers.size === 0 && this.pollTimer) {
+        clearInterval(this.pollTimer);
+        this.pollTimer = null;
+      }
+    };
+  }
+
+  public getSessionLiveSteps(sessionId: string): {
+    liveSteps: TaskLiveStep[];
+    currentActionText: string;
+    isWorking: boolean;
+  } {
+    const transcriptPath = path.join(
+      config.antigravityAppDataDir,
+      'brain',
+      sessionId,
+      '.system_generated',
+      'logs',
+      'transcript.jsonl'
+    );
+
+    const liveSteps: TaskLiveStep[] = [];
+    let currentActionText = '';
+    let isWorking = false;
+
+    if (!fs.existsSync(transcriptPath)) {
+      return { liveSteps, currentActionText, isWorking };
+    }
+
+    try {
+      const content = fs.readFileSync(transcriptPath, 'utf-8');
+      const lines = content.trim().split('\n');
+      const recentLines = lines.slice(-40);
+
+      let stepCounter = 1;
+      for (const line of recentLines) {
+        if (!line.trim()) continue;
+        try {
+          const step = JSON.parse(line);
+          const timestamp = step.created_at || new Date().toISOString();
+
+          if (step.tool_calls && Array.isArray(step.tool_calls)) {
+            for (const call of step.tool_calls) {
+              const toolName = call.name || 'tool';
+              const args = call.args || {};
+
+              let title = args.toolSummary || args.toolAction || toolName;
+              if (typeof title === 'string') {
+                title = title.replace(/^"|"$/g, '').trim();
+              }
+
+              let detail = '';
+              let type: TaskLiveStep['type'] = 'tool_call';
+
+              if (toolName === 'view_file') {
+                type = 'file_read';
+                const filePath = (args.AbsolutePath || '').replace(/^"|"$/g, '');
+                const fileName = path.basename(filePath);
+                const lineRange = args.StartLine ? `#L${args.StartLine}-${args.EndLine || args.StartLine}` : '';
+                detail = `${fileName} ${lineRange}`.trim();
+              } else if (toolName === 'replace_file_content' || toolName === 'write_to_file') {
+                type = 'file_edit';
+                const filePath = (args.TargetFile || '').replace(/^"|"$/g, '');
+                detail = path.basename(filePath);
+              } else if (toolName === 'run_command') {
+                type = 'command';
+                const cmd = (args.CommandLine || '').replace(/^"|"$/g, '');
+                detail = cmd.length > 60 ? `${cmd.substring(0, 60)}...` : cmd;
+              } else {
+                detail = toolName;
+              }
+
+              liveSteps.push({
+                id: `step_${stepCounter++}`,
+                type,
+                title,
+                detail: detail || undefined,
+                status: 'done',
+                timestamp
+              });
+              currentActionText = title;
+            }
+          }
+        } catch (_) {
+          // ignore invalid json line
+        }
+      }
+
+      // Kiểm tra trạng thái session từ cache
+      const cached = this.sessionStateCache.get(sessionId);
+      if (cached && (cached.status === SessionStatus.RUNNING || cached.notFullyIdle)) {
+        isWorking = true;
+        liveSteps.push({
+          id: `step_${stepCounter++}`,
+          type: 'thinking',
+          title: 'Working...',
+          detail: currentActionText ? `Đang thực thi: ${currentActionText}` : 'Đang xử lý...',
+          status: 'running',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.warn('[Adapter] Lỗi đọc live steps từ transcript.jsonl:', err);
+    }
+
+    return { liveSteps, currentActionText, isWorking };
   }
 
   /**
@@ -434,6 +569,8 @@ export class AntigravityAdapter implements IAntigravityAdapter {
       };
 
       this.clearActiveTaskForSession(sessionId);
+      this.lastLiveStepCountBySession.delete(sessionId);
+      this.lastActionTextBySession.delete(sessionId);
 
       for (const sub of this.subscribers) {
         sub(event);
@@ -471,6 +608,8 @@ export class AntigravityAdapter implements IAntigravityAdapter {
               };
 
               this.clearActiveTaskForSession(session.sessionId);
+              this.lastLiveStepCountBySession.delete(session.sessionId);
+              this.lastActionTextBySession.delete(session.sessionId);
 
               for (const sub of this.subscribers) {
                 sub(event);
@@ -499,6 +638,33 @@ export class AntigravityAdapter implements IAntigravityAdapter {
             status: currentStatus,
             notFullyIdle: currentNotFullyIdle
           });
+
+          // Cập nhật real-time các bước hành động (live steps) nếu session đang chạy hoặc có active task
+          const isActivelyWorking =
+            currentStatus === SessionStatus.RUNNING ||
+            currentNotFullyIdle ||
+            this.activeTaskBySession.has(session.sessionId);
+
+          if (isActivelyWorking) {
+            const { liveSteps, currentActionText } = this.getSessionLiveSteps(session.sessionId);
+            const prevCount = this.lastLiveStepCountBySession.get(session.sessionId) || 0;
+            const prevAction = this.lastActionTextBySession.get(session.sessionId) || '';
+
+            if (liveSteps.length !== prevCount || currentActionText !== prevAction) {
+              this.lastLiveStepCountBySession.set(session.sessionId, liveSteps.length);
+              this.lastActionTextBySession.set(session.sessionId, currentActionText);
+
+              const activeInfo = this.activeTaskBySession.get(session.sessionId);
+              for (const sub of this.liveSubscribers) {
+                sub({
+                  taskId: activeInfo?.taskId,
+                  sessionId: session.sessionId,
+                  liveSteps,
+                  currentActionText: currentActionText || 'Đang xử lý...'
+                });
+              }
+            }
+          }
         }
       } catch (err) {
         // ignore polling loop error

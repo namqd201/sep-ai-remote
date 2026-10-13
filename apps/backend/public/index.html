@@ -555,6 +555,137 @@
       cursor: pointer;
       margin-top: 6px;
     }
+
+    /* REALTIME ANTIGRAVITY EXECUTION STREAM (MATCHING IDE) */
+    .live-execution-box {
+      background: #090D16;
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: 14px;
+      margin: 12px 0 16px 0;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .live-box-header {
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      user-select: none;
+    }
+    .live-box-header:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .live-dot-pulse {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #06B6D4;
+      display: inline-block;
+      box-shadow: 0 0 10px #06B6D4;
+      animation: pulse-glow 1.5s infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse-glow {
+      0% { transform: scale(0.95); opacity: 0.7; box-shadow: 0 0 4px #06B6D4; }
+      50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px #06B6D4; }
+      100% { transform: scale(0.95); opacity: 0.7; box-shadow: 0 0 4px #06B6D4; }
+    }
+    .live-timer-badge {
+      font-size: 0.72rem;
+      background: rgba(6, 182, 212, 0.15);
+      color: #67E8F9;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-weight: 600;
+    }
+    .live-steps-list {
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    .live-step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.85rem;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 2px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.2s;
+    }
+    .live-step-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .live-step-item.file-read {
+      border-left-color: #38BDF8;
+    }
+    .live-step-item.file-edit {
+      border-left-color: #34D399;
+    }
+    .live-step-item.command {
+      border-left-color: #FBBF24;
+    }
+    .live-step-item.working-step {
+      border-left-color: #06B6D4;
+      background: rgba(6, 182, 212, 0.08);
+      animation: breathing 2s infinite ease-in-out;
+    }
+    @keyframes breathing {
+      0% { background: rgba(6, 182, 212, 0.05); }
+      50% { background: rgba(6, 182, 212, 0.14); }
+      100% { background: rgba(6, 182, 212, 0.05); }
+    }
+    .step-icon {
+      font-size: 1rem;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+    .step-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .step-title {
+      font-weight: 500;
+      color: #F1F5F9;
+      line-height: 1.35;
+    }
+    .step-detail {
+      font-size: 0.78rem;
+      color: #94A3B8;
+      margin-top: 2px;
+      word-break: break-all;
+    }
+    .step-detail.code-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #7DD3FC;
+    }
+    .step-tag-code {
+      display: inline-block;
+      color: #F43F5E;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+    .step-arrow {
+      color: #475569;
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+    .live-box-collapsed .live-steps-list {
+      display: none;
+    }
+    .live-box-collapsed #live-box-chevron {
+      transform: rotate(-90deg);
+    }
   </style>
 </head>
 <body>
@@ -923,7 +1054,9 @@
     recognition: null,
     deferredInstallPrompt: null,
     modalAttachments: [],
-    chatAttachments: []
+    chatAttachments: [],
+    currentOpenTaskId: null,
+    liveDetailTimer: null
   };
 
   // --- XỬ LÝ ĐÍNH KÈM ẢNH TỪ ĐIỆN THOẠI ---
@@ -1271,6 +1404,11 @@
   }
 
   function closeDetailModal() {
+    state.currentOpenTaskId = null;
+    if (state.liveDetailTimer) {
+      clearInterval(state.liveDetailTimer);
+      state.liveDetailTimer = null;
+    }
     document.getElementById('detail-modal').classList.remove('open');
   }
 
@@ -1334,6 +1472,17 @@
       state.sessions = msg.payload.sessions || [];
       state.projectGroups = msg.payload.projectGroups || [];
       renderSessionsAndProjects();
+    } else if (msg.event === 'task_live_steps') {
+      const payload = msg.payload;
+      const task = state.tasks.find(t => (payload.taskId && t.id === payload.taskId) || (payload.sessionId && t.sessionId === payload.sessionId));
+      if (task) {
+        task.liveSteps = payload.liveSteps || [];
+        task.currentActionText = payload.currentActionText || '';
+        if (state.currentOpenTaskId === task.id) {
+          updateModalLiveSteps(task);
+        }
+        updateCardLiveAction(task);
+      }
     } else if (msg.event === 'task_updated') {
       fetchTasks();
     } else if (msg.event === 'task_completed') {
@@ -1526,7 +1675,8 @@
 
     const makeTaskHtml = (t) => {
       const isWaiting = t.status === 'PENDING' || t.status === 'QUEUED_OFFLINE';
-      const statusLabel = t.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (t.status === 'QUEUED_OFFLINE' ? '⏳ HÀNG ĐỢI OFFLINE' : t.status);
+      const isRunning = t.status === 'RUNNING';
+      const statusLabel = t.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (t.status === 'QUEUED_OFFLINE' ? '⏳ HÀNG ĐỢI OFFLINE' : (isRunning ? '⚡ ĐANG CHẠY' : t.status));
       return `
         <div class="card task-item" onclick="openDetailModal('${t.id}')">
           <div class="task-header">
@@ -1534,6 +1684,14 @@
             <span class="pill pill-${t.status}">${statusLabel}</span>
           </div>
           <div class="task-prompt">${t.prompt}</div>
+          ${isRunning ? `
+            <div id="task-card-live-${t.id}" style="margin: 8px 0; padding: 7px 10px; background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.3); border-radius: 8px; font-size: 0.78rem; color: #67E8F9; display: flex; align-items: center; gap: 8px;">
+              <span class="live-dot-pulse"></span>
+              <span class="task-card-live-text" style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${t.currentActionText ? '⚡ ' + t.currentActionText : '⚡ Antigravity đang thực thi...'}
+              </span>
+            </div>
+          ` : ''}
           <div class="task-meta">
             <span>🕒 ${formatVietnamTime(t.createdAt)}</span>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1563,12 +1721,132 @@
     }
   }
 
+  function formatElapsed(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}s`;
+  }
+
+  function toggleLiveBoxSteps() {
+    const box = document.getElementById('modal-live-box');
+    if (box) {
+      box.classList.toggle('live-box-collapsed');
+    }
+  }
+
+  function renderStepHtml(step) {
+    let icon = '⚙️';
+    let typeClass = '';
+    let detailHtml = '';
+
+    if (step.type === 'file_read') {
+      icon = '📖';
+      typeClass = 'file-read';
+      detailHtml = step.detail ? `<div class="step-detail code-badge">${step.detail}</div>` : '';
+    } else if (step.type === 'file_edit') {
+      icon = '✏️';
+      typeClass = 'file-edit';
+      detailHtml = step.detail ? `<div class="step-detail code-badge">${step.detail}</div>` : '';
+    } else if (step.type === 'command') {
+      icon = '💻';
+      typeClass = 'command';
+      detailHtml = step.detail ? `<div class="step-detail code-badge">${step.detail}</div>` : '';
+    } else if (step.type === 'active' || step.type === 'tool_call') {
+      icon = '<span class="live-dot-pulse"></span>';
+      typeClass = 'working-step';
+      detailHtml = step.detail ? `<div class="step-detail">${step.detail}</div>` : '';
+    } else {
+      detailHtml = step.detail ? `<div class="step-detail">${step.detail}</div>` : '';
+    }
+
+    return `
+      <div class="live-step-item ${typeClass}">
+        <span class="step-icon">${icon}</span>
+        <div class="step-body">
+          <div class="step-title">${step.title}</div>
+          ${detailHtml}
+        </div>
+        <span class="step-arrow">&gt;</span>
+      </div>
+    `;
+  }
+
+  function updateModalLiveSteps(task) {
+    const actionTextEl = document.getElementById('live-box-action-text');
+    const stepsListEl = document.getElementById('modal-live-steps-list');
+    if (actionTextEl && task.currentActionText) {
+      actionTextEl.innerText = task.currentActionText;
+    }
+    if (stepsListEl && task.liveSteps) {
+      stepsListEl.innerHTML = task.liveSteps.map(renderStepHtml).join('');
+      stepsListEl.scrollTop = stepsListEl.scrollHeight;
+    }
+  }
+
+  function updateCardLiveAction(task) {
+    const cardBadge = document.getElementById(`task-card-live-${task.id}`);
+    if (cardBadge) {
+      const textEl = cardBadge.querySelector('.task-card-live-text');
+      if (textEl) {
+        textEl.innerText = task.currentActionText ? `⚡ ${task.currentActionText}` : '⚡ Antigravity đang thực thi...';
+      }
+    }
+  }
+
   function openDetailModal(taskId) {
     const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
 
+    state.currentOpenTaskId = taskId;
+    if (state.liveDetailTimer) {
+      clearInterval(state.liveDetailTimer);
+      state.liveDetailTimer = null;
+    }
+
     document.getElementById('detail-title').innerText = task.title;
     const cont = document.getElementById('detail-content');
+
+    const isRunning = task.status === 'RUNNING';
+    const isWaiting = task.status === 'PENDING' || task.status === 'QUEUED_OFFLINE';
+
+    // Live Execution Stream Box
+    let elapsedSeconds = 0;
+    if (task.createdAt) {
+      const startMs = new Date(task.createdAt).getTime();
+      const endMs = task.completedAt ? new Date(task.completedAt).getTime() : Date.now();
+      elapsedSeconds = Math.max(0, Math.floor((endMs - startMs) / 1000));
+    }
+
+    const hasLiveSteps = (task.liveSteps && task.liveSteps.length > 0) || isRunning;
+    let liveBoxHtml = '';
+
+    if (hasLiveSteps) {
+      const stepsHtml = (task.liveSteps && task.liveSteps.length > 0)
+        ? task.liveSteps.map(renderStepHtml).join('')
+        : `<div style="color: #67E8F9; font-size: 0.8rem; padding: 6px;"><span class="live-dot-pulse"></span> Đang kết nối luồng hoạt động Antigravity...</div>`;
+
+      const headerTitle = task.currentActionText || (isRunning ? 'Exploring file, running commands' : 'Các bước thực thi Antigravity');
+
+      liveBoxHtml = `
+        <div id="modal-live-box" class="live-execution-box ${!isRunning && task.status === 'COMPLETED' ? 'live-box-collapsed' : ''}">
+          <div class="live-box-header" onclick="toggleLiveBoxSteps()">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+              <span class="live-dot-pulse" style="${isRunning ? '' : 'background: #10B981; box-shadow: 0 0 6px #10B981; animation: none;'}"></span>
+              <span id="live-box-action-text" style="font-weight: 600; font-size: 0.85rem; color: #F1F5F9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${headerTitle}
+              </span>
+              <span id="live-box-chevron" style="transition: transform 0.2s; font-size: 0.8rem; color: #94A3B8;">˅</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+              <span id="modal-live-timer" class="live-timer-badge">⏱️ ${formatElapsed(elapsedSeconds)}</span>
+            </div>
+          </div>
+          <div id="modal-live-steps-list" class="live-steps-list">
+            ${stepsHtml}
+          </div>
+        </div>
+      `;
+    }
 
     let reportHtml = '<div style="color: var(--text-muted); font-style: italic;">Đang chờ báo cáo từ Antigravity...</div>';
     if (task.report) {
@@ -1614,12 +1892,10 @@
       `;
     }
 
-    const isWaiting = task.status === 'PENDING' || task.status === 'QUEUED_OFFLINE';
-
     cont.innerHTML = `
       <div style="margin-bottom: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="pill pill-${task.status}">${task.status === 'PENDING' ? '⏳ ĐANG CHỜ' : task.status}</span>
+          <span class="pill pill-${task.status}">${task.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (isRunning ? '⚡ ĐANG CHẠY' : task.status)}</span>
           <span style="font-size: 0.75rem; color: var(--accent); font-weight: 600;">🇻🇳 Giờ VN (GMT+7)</span>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px;">
@@ -1640,11 +1916,24 @@
           </div>
         ` : ''}
       </div>
+      ${liveBoxHtml}
       <hr style="border: none; border-top: 1px solid var(--surface-light); margin: 14px 0;">
       ${reportHtml}
     `;
 
     document.getElementById('detail-modal').classList.add('open');
+
+    if (isRunning) {
+      state.liveDetailTimer = setInterval(() => {
+        elapsedSeconds++;
+        const timerEl = document.getElementById('modal-live-timer');
+        if (timerEl) {
+          timerEl.innerText = `⏱️ ${formatElapsed(elapsedSeconds)}`;
+        }
+      }, 1000);
+      const stepsListEl = document.getElementById('modal-live-steps-list');
+      if (stepsListEl) stepsListEl.scrollTop = stepsListEl.scrollHeight;
+    }
   }
 
   async function executeNextInQueue() {

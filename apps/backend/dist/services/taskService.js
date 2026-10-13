@@ -199,6 +199,22 @@ export class TaskService {
         }
         return task;
     }
+    updateLiveSteps(taskId, sessionId, liveSteps, currentActionText) {
+        let task = null;
+        if (taskId) {
+            task = db.getTask(taskId);
+        }
+        if (!task && sessionId) {
+            task = this.getActiveTaskForSession(sessionId);
+        }
+        if (task) {
+            task.liveSteps = liveSteps || [];
+            task.currentActionText = currentActionText || '';
+            task.updatedAt = getVietnamNowIso();
+            db.saveTask(task);
+        }
+        return task;
+    }
     flushOfflineQueue() {
         if (!this.isPcOnline || !this.bridgeDispatcher)
             return;

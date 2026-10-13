@@ -27,6 +27,15 @@ export interface TaskReport {
   completedAt: string;
 }
 
+export interface TaskLiveStep {
+  id: string;
+  type: 'thinking' | 'tool_call' | 'file_read' | 'file_edit' | 'command' | 'generic';
+  title: string;
+  detail?: string;
+  status: 'running' | 'done' | 'error';
+  timestamp: string;
+}
+
 export interface Task {
   id: string;
   idempotencyKey?: string;
@@ -45,6 +54,8 @@ export interface Task {
   attachments?: TaskAttachment[];
   isQueued?: boolean;
   priority?: number;
+  liveSteps?: TaskLiveStep[];
+  currentActionText?: string;
 }
 
 export interface CreateTaskDto {

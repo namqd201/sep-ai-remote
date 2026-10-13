@@ -80,4 +80,21 @@ export interface IAntigravityAdapter {
   setActiveTaskForSession?(sessionId: string, taskId: string, title: string): void;
   getActiveTaskForSession?(sessionId: string): { taskId: string; title: string } | undefined;
   clearActiveTaskForSession?(sessionId: string): void;
+
+  /**
+   * Lấy các bước hành động thời gian thực của phiên làm việc từ transcript
+   */
+  getSessionLiveSteps?(sessionId: string): {
+    liveSteps: import('@sep-ai/shared').TaskLiveStep[];
+    currentActionText: string;
+    isWorking: boolean;
+  };
+  subscribeToLiveSteps?(
+    callback: (data: {
+      taskId?: string;
+      sessionId: string;
+      liveSteps: import('@sep-ai/shared').TaskLiveStep[];
+      currentActionText: string;
+    }) => void
+  ): () => void;
 }

@@ -142,6 +142,14 @@ export class WsGateway {
                 }
                 break;
             }
+            case WsEventType.TASK_LIVE_STEPS: {
+                if (client.role === UserRole.BRIDGE) {
+                    const payload = message.payload;
+                    taskService.updateLiveSteps(payload.taskId, payload.sessionId, payload.liveSteps, payload.currentActionText);
+                    this.broadcastToMobile(message);
+                }
+                break;
+            }
             case WsEventType.TASK_EVENT: {
                 if (client.role === UserRole.BRIDGE) {
                     const taskEvent = message.payload;

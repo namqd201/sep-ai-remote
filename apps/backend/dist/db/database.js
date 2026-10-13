@@ -64,6 +64,18 @@ export class AppDatabase {
         catch (_) {
             // column already exists
         }
+        try {
+            this.db.exec(`ALTER TABLE tasks ADD COLUMN live_steps_json TEXT;`);
+        }
+        catch (_) {
+            // column already exists
+        }
+        try {
+            this.db.exec(`ALTER TABLE tasks ADD COLUMN current_action TEXT;`);
+        }
+        catch (_) {
+            // column already exists
+        }
     }
     // --- Device Management ---
     upsertDevice(device) {
@@ -151,9 +163,10 @@ export class AppDatabase {
       INSERT INTO tasks (
         id, idempotency_key, title, prompt, session_id, workspace_path,
         status, created_at, updated_at, dispatched_at, completed_at,
-        report_json, created_by_device, retry_count, attachments_json
+        report_json, created_by_device, retry_count, attachments_json,
+        live_steps_json, current_action
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         status = excluded.status,
         updated_at = excluded.updated_at,
@@ -161,9 +174,11 @@ export class AppDatabase {
         completed_at = excluded.completed_at,
         report_json = excluded.report_json,
         retry_count = excluded.retry_count,
-        attachments_json = excluded.attachments_json
+        attachments_json = excluded.attachments_json,
+        live_steps_json = COALESCE(excluded.live_steps_json, tasks.live_steps_json),
+        current_action = COALESCE(excluded.current_action, tasks.current_action)
     `);
-        stmt.run(task.id, task.idempotencyKey || null, task.title, task.prompt, task.sessionId || null, task.workspacePath || null, task.status, task.createdAt, task.updatedAt, task.dispatchedAt || null, task.completedAt || null, task.report ? JSON.stringify(task.report) : null, task.createdByDevice, task.retryCount, task.attachments ? JSON.stringify(task.attachments) : null);
+        stmt.run(task.id, task.idempotencyKey || null, task.title, task.prompt, task.sessionId || null, task.workspacePath || null, task.status, task.createdAt, task.updatedAt, task.dispatchedAt || null, task.completedAt || null, task.report ? JSON.stringify(task.report) : null, task.createdByDevice, task.retryCount, task.attachments ? JSON.stringify(task.attachments) : null, task.liveSteps ? JSON.stringify(task.liveSteps) : null, task.currentActionText || null);
     }
     getPendingOfflineTasks() {
         const stmt = this.db.prepare(`
@@ -224,7 +239,9 @@ export class AppDatabase {
             report: row.report_json ? JSON.parse(row.report_json) : undefined,
             createdByDevice: row.created_by_device,
             retryCount: row.retry_count || 0,
-            attachments: row.attachments_json ? JSON.parse(row.attachments_json) : undefined
+            attachments: row.attachments_json ? JSON.parse(row.attachments_json) : undefined,
+            liveSteps: row.live_steps_json ? JSON.parse(row.live_steps_json) : undefined,
+            currentActionText: row.current_action || undefined
         };
     }
 }

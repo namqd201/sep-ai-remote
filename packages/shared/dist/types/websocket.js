@@ -19,6 +19,7 @@ var WsEventType;
     WsEventType["NEW_TASK"] = "new_task";
     WsEventType["DISPATCH_TASK"] = "dispatch_task";
     WsEventType["TASK_STATUS_UPDATED"] = "task_status_updated";
+    WsEventType["TASK_LIVE_STEPS"] = "task_live_steps";
     WsEventType["TASK_COMPLETED"] = "task_completed";
     WsEventType["TASK_FAILED"] = "task_failed";
     WsEventType["APPROVAL_REQUIRED"] = "approval_required";

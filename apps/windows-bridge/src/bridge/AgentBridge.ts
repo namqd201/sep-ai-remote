@@ -34,6 +34,14 @@ export class AgentBridge {
       });
     });
 
+    antigravityAdapter.subscribeToLiveSteps((data) => {
+      this.sendWsMessage({
+        event: WsEventType.TASK_LIVE_STEPS,
+        payload: data,
+        timestamp: new Date().toISOString()
+      });
+    });
+
     taskQueue.setEventCallback((event: TaskEvent) => {
       this.sendWsMessage({
         event: WsEventType.TASK_EVENT,
