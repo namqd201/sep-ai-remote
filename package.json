@@ -16,8 +16,7 @@
   "scripts": {
     "build": "pnpm -r run build",
     "test": "node --test apps/backend/dist/tests/backend.test.js apps/windows-bridge/dist/tests/bridge.test.js",
-    "start": "node scripts/start-cloud.js",
-    "start:local": "node scripts/start-all.js",
+    "start": "node scripts/start-all.js",
     "start:backend": "node scripts/start-backend.js",
     "start:bridge": "node scripts/start-bridge.js",
     "tunnel": "node scripts/tunnel.js",

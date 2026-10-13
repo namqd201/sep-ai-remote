@@ -75,6 +75,24 @@ export async function startTunnel() {
   // 2. Nếu dùng Ngrok Static Domain vĩnh viễn
   if (provider === 'ngrok') {
     const ngrokDomain = process.env.NGROK_DOMAIN || 'padding-shifting-useable.ngrok-free.dev';
+
+    // Kiểm tra nếu Ngrok đã đang chạy sẵn ở cổng 4040
+    try {
+      const existingRes = await fetch('http://127.0.0.1:4040/api/tunnels');
+      if (existingRes.ok) {
+        const data = await existingRes.json();
+        const pubUrl = data.tunnels?.[0]?.public_url || `https://${ngrokDomain}`;
+        fs.writeFileSync(urlFilePath, pubUrl);
+        console.log('\n========================================================');
+        console.log('⭐ LINK NGROK TĨNH VĨNH VIỄN (KHÔNG BAO GIỜ ĐỔI):');
+        console.log(`👉 ${pubUrl}`);
+        console.log('--------------------------------------------------------');
+        console.log('📲 Sếp chỉ cần cài vào điện thoại ĐÚNG 1 LẦN DUY NHẤT!');
+        console.log('========================================================\n');
+        return { url: pubUrl, process: null };
+      }
+    } catch (_) {}
+
     console.log(`[Tunnel] Đang khởi động Ngrok với tên miền tĩnh vĩnh viễn: ${ngrokDomain}...`);
     
     const ngrokArgs = ['http', '3000'];
