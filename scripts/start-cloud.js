@@ -7,6 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
+const assignedPort = String(process.env.SERVER_PORT || process.env.PORT || 3000);
+process.env.PORT = assignedPort;
+
 // Cấu hình múi giờ Việt Nam (GMT+7)
 process.env.TZ = 'Asia/Ho_Chi_Minh';
 process.env.NODE_ENV = 'production';
@@ -15,7 +18,7 @@ console.log('========================================================');
 console.log('🚀 SẾP AI REMOTE — KHỞI CHẠY CLOUD BACKEND');
 console.log('========================================================');
 console.log(`🕒 Múi giờ: Việt Nam (GMT+7, Asia/Ho_Chi_Minh)`);
-console.log(`🌐 Cổng lắng nghe (PORT): ${process.env.PORT || 3000}`);
+console.log(`🌐 Cổng lắng nghe (PORT): ${assignedPort}`);
 console.log('--------------------------------------------------------');
 
 const backendDist = path.join(rootDir, 'apps/backend/dist/index.js');
@@ -41,6 +44,7 @@ const backend = spawn('node', [backendDist], {
   cwd: rootDir,
   env: {
     ...process.env,
+    PORT: assignedPort,
     TZ: 'Asia/Ho_Chi_Minh',
     NODE_ENV: 'production'
   }

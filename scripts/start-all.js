@@ -19,7 +19,7 @@ if (isCloudEnvironment) {
   console.log('🚀 SẾP AI REMOTE — PHÁT HIỆN MÔI TRƯỜNG CLOUD / LINUX');
   console.log('========================================================');
   console.log(`🕒 Múi giờ: Việt Nam (GMT+7, Asia/Ho_Chi_Minh)`);
-  console.log(`🌐 Cổng lắng nghe (PORT): ${process.env.PORT || 3000}`);
+  console.log(`🌐 Cổng lắng nghe (PORT): ${process.env.PORT || process.env.SERVER_PORT || 3000}`);
   console.log('--------------------------------------------------------');
 
   const backendDist = path.join(rootDir, 'apps/backend/dist/index.js');
