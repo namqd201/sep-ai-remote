@@ -7,6 +7,28 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@sep-ai/shared':
+        specifier: file:./packages/shared
+        version: link:packages/shared
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.6
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
+      express:
+        specifier: ^4.21.2
+        version: 4.22.3
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.3
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.1
+      ws:
+        specifier: ^8.18.1
+        version: 8.22.0
     devDependencies:
       typescript:
         specifier: ^5.7.3
@@ -15,7 +37,7 @@ importers:
   apps/backend:
     dependencies:
       '@sep-ai/shared':
-        specifier: workspace:*
+        specifier: file:../../packages/shared
         version: link:../../packages/shared
       cors:
         specifier: ^2.8.5
@@ -61,7 +83,7 @@ importers:
   apps/windows-bridge:
     dependencies:
       '@sep-ai/shared':
-        specifier: workspace:*
+        specifier: file:../../packages/shared
         version: link:../../packages/shared
       dotenv:
         specifier: ^16.4.7

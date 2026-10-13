@@ -4,10 +4,15 @@
   "description": "Sếp AI Remote - Mobile Voice Control & Realtime Monitor for Antigravity",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
+  "dependencies": {
+    "@sep-ai/shared": "file:./packages/shared",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
+  },
   "scripts": {
     "build": "pnpm -r run build",
     "test": "node --test apps/backend/dist/tests/backend.test.js apps/windows-bridge/dist/tests/bridge.test.js",
