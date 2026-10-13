@@ -58,6 +58,11 @@ export class AppDatabase {
         is_read INTEGER DEFAULT 0
       );
 
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+
       CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
       CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);
       CREATE INDEX IF NOT EXISTS idx_tasks_idempotency ON tasks(idempotency_key);
@@ -290,6 +295,32 @@ export class AppDatabase {
       taskId: (r.task_id as string) || undefined,
       createdAt: r.created_at as string
     }));
+  }
+
+  // --- Settings Management ---
+  public getSetting(key: string): string | null {
+    const stmt = this.db.prepare('SELECT value FROM settings WHERE key = ?');
+    const row = stmt.get(key) as { value: string } | undefined;
+    return row ? row.value : null;
+  }
+
+  public setSetting(key: string, value: string): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO settings (key, value)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `);
+    stmt.run(key, value);
+  }
+
+  public getAllSettings(): Record<string, string> {
+    const stmt = this.db.prepare('SELECT key, value FROM settings');
+    const rows = stmt.all() as { key: string; value: string }[];
+    const result: Record<string, string> = {};
+    for (const r of rows) {
+      result[r.key] = r.value;
+    }
+    return result;
   }
 
   private mapTask(row: Record<string, unknown>): Task {

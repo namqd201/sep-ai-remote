@@ -3,6 +3,7 @@ import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
 import { notificationService } from './notificationService.js';
+import { telegramService } from './telegramService.js';
 import { TaskStatus, getVietnamNowIso, getTaskCompletionVoiceText, getTaskFailureVoiceText, getTaskApprovalVoiceText } from '@sep-ai/shared';
 export class TaskService {
     isPcOnline = false;
@@ -139,6 +140,10 @@ export class TaskService {
                 }
             }
             notificationService.notifyTaskCompleted(task.title, task.id, task.report?.summary);
+            // Gửi tin nhắn thoại tự động qua Telegram (nếu đã cấu hình)
+            telegramService.sendVoiceNotification(voiceText, task.title).catch((err) => {
+                console.warn('[TaskService] Gửi voice Telegram thất bại:', err);
+            });
             if (this.wsBroadcaster) {
                 this.wsBroadcaster('task_completed', {
                     taskId: task.id,
@@ -169,6 +174,10 @@ export class TaskService {
                 }
             }
             notificationService.notifyTaskFailed(task.title, task.id, task.report?.errorDetails);
+            // Gửi tin nhắn thoại tự động qua Telegram khi task lỗi (nếu đã cấu hình)
+            telegramService.sendVoiceNotification(voiceText, task.title).catch((err) => {
+                console.warn('[TaskService] Gửi voice Telegram thất bại:', err);
+            });
             if (this.wsBroadcaster) {
                 this.wsBroadcaster('task_failed', {
                     taskId: task.id,

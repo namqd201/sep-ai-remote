@@ -885,23 +885,95 @@
 
     <!-- TAB 4: SETTINGS -->
     <div id="tab-settings" class="tab-pane">
-      <div class="card">
-        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Voice AI Tiếng Việt (Tự nhiên)</h4>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <!-- 1. Voice AI & Thông báo phát tiếng chạy ngầm -->
+      <div class="card" style="border: 1px solid rgba(6, 182, 212, 0.4); box-shadow: 0 4px 20px rgba(6, 182, 212, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="font-size: 0.88rem; color: #67E8F9; text-transform: uppercase; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <span>🎙️</span>
+            <span>Thông báo Giọng nói khi ở App khác</span>
+          </h4>
+          <span id="bg-audio-status-badge" class="badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">
+            ⏸️ CHƯA BẬT
+          </span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--surface-light);">
           <div>
-            <div style="font-size: 0.95rem; font-weight: 600;">Tự động đọc khi hoàn thành task</div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);">Phát: "Đã xong task, Sếp vào kiểm tra đi ạ."</div>
+            <div style="font-size: 0.92rem; font-weight: 600;">Tự động đọc giọng nói khi xong việc</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Phát: "Sếp Nam ơi, em đã làm xong task..."</div>
           </div>
           <input type="checkbox" id="tts-auto-toggle" checked style="width: 20px; height: 20px; accent-color: var(--primary);">
         </div>
-        <button class="btn" style="background: var(--surface-light); color: var(--accent); font-size: 0.88rem; padding: 10px;" onclick="playVietnameseAudio('Đã xong task, Sếp vào kiểm tra đi ạ.')">
-          🔊 Thử nghe giọng người Việt Nam tự nhiên
+
+        <!-- Chế độ Trực âm thanh Chạy ngầm -->
+        <div style="margin-bottom: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px;">
+          <div style="font-size: 0.9rem; font-weight: 600; color: #F1F5F9; display: flex; align-items: center; gap: 6px;">
+            <span>🎧</span> Chế độ Trực âm thanh Chạy ngầm
+          </div>
+          <div style="font-size: 0.78rem; color: #94A3B8; margin: 6px 0 10px 0; line-height: 1.45;">
+            Kích hoạt luồng âm thanh chạy ngầm (MediaSession). Khi Sếp khóa màn hình hoặc chuyển sang lướt Facebook, xem YouTube, TikTok, Zalo... loa điện thoại vẫn tự động cất tiếng nói rõ ràng khi Antigravity xong task!
+          </div>
+          <button id="btn-toggle-bg-audio" class="btn" style="background: var(--primary); font-size: 0.85rem; padding: 10px;" onclick="toggleBgAudioService()">
+            🎧 Bật chế độ Trực âm thanh ngay
+          </button>
+        </div>
+
+        <!-- Thông báo đẩy Hệ thống & Rung -->
+        <div style="margin-bottom: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px;">
+          <div style="font-size: 0.9rem; font-weight: 600; color: #F1F5F9; display: flex; align-items: center; gap: 6px;">
+            <span>🔔</span> Thông báo Màn hình khóa & Rung máy
+          </div>
+          <div style="font-size: 0.78rem; color: #94A3B8; margin: 6px 0 10px 0; line-height: 1.45;">
+            Rung điện thoại và hiển thị pop-up thông báo hệ thống lên màn hình khóa với nút bấm nghe báo cáo giọng nói.
+          </div>
+          <button id="btn-request-notif" class="btn" style="background: var(--surface-light); color: var(--accent); font-size: 0.85rem; padding: 9px;" onclick="requestSystemNotificationPermission()">
+            🔔 Cấp quyền Thông báo Hệ thống
+          </button>
+        </div>
+
+        <!-- Nút test sau 5 giây để khóa màn hình thử -->
+        <button class="btn" style="background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); color: #67E8F9; font-size: 0.85rem; padding: 10px;" onclick="startTestCountdown()">
+          ⏱️ Thử phát tiếng sau 5s (Để thử khóa màn hình / sang app khác)
         </button>
       </div>
 
+      <!-- 2. Nhận Tin nhắn Thoại qua Telegram (Phòng khi tắt hẳn app) -->
+      <div class="card">
+        <h4 style="font-size: 0.85rem; color: #60A5FA; margin-bottom: 8px; text-transform: uppercase; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+          <span>✈️</span> Nhận Tin Nhắn Thoại Qua Telegram
+        </h4>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;">
+          Nếu Sếp đóng hẳn trình duyệt, Telegram Bot sẽ tự động gửi file âm thanh giọng nói vào điện thoại của Sếp. Nghe được qua loa ngoài, tai nghe Bluetooth hoặc loa ô tô!
+        </p>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 0.76rem; color: var(--text-muted);">Telegram Bot Token:</label>
+          <input type="text" id="setting-telegram-token" class="input-field" placeholder="123456789:ABCdefGhIjkLmNoPqRsTuvWxYz">
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 0.76rem; color: var(--text-muted);">Telegram Chat ID của Sếp:</label>
+          <input type="text" id="setting-telegram-chatid" class="input-field" placeholder="Ví dụ: 123456789">
+          <div style="font-size: 0.72rem; color: #94A3B8; margin-top: 2px;">
+            💡 Mẹo: Chat với bot <b>@userinfobot</b> trên Telegram để lấy Chat ID trong 5 giây.
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+          <input type="checkbox" id="setting-telegram-enabled" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
+          <label for="setting-telegram-enabled" style="font-size: 0.82rem; color: var(--text); cursor: pointer;">Bật gửi tin nhắn thoại qua Telegram</label>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" onclick="saveTelegramSettings()" style="flex: 1; background: #2563EB;">💾 Lưu Telegram</button>
+          <button class="btn" onclick="testTelegramVoice()" style="flex: 1; background: var(--surface-light); color: var(--accent);">📨 Gửi thử voice</button>
+        </div>
+      </div>
+
+      <!-- 3. Shortcut Màn hình chính -->
       <div class="card">
         <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Shortcut Màn hình chính</h4>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
           Thêm Sếp AI Remote vào màn hình chính của điện thoại để mở nhanh như ứng dụng native không cần thanh địa chỉ trình duyệt.
         </p>
         <button class="btn" style="background: #1D4ED8;" onclick="showPwaInstructions()">
@@ -909,6 +981,7 @@
         </button>
       </div>
 
+      <!-- 4. Kết nối & Thiết bị -->
       <div class="card">
         <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Kết nối & Thiết bị</h4>
         <div style="margin-bottom: 10px;">
@@ -1056,7 +1129,10 @@
     modalAttachments: [],
     chatAttachments: [],
     currentOpenTaskId: null,
-    liveDetailTimer: null
+    liveDetailTimer: null,
+    bgAudioActive: false,
+    systemNotificationGranted: false,
+    telegramSettings: { botToken: '', chatId: '', enabled: true }
   };
 
   // --- XỬ LÝ ĐÍNH KÈM ẢNH TỪ ĐIỆN THOẠI ---
@@ -1279,6 +1355,228 @@
     });
   }
 
+  // --- BACKGROUND AUDIO SERVICE (TRỰC ÂM THANH KHI Ở APP KHÁC / TẮT MÀN HÌNH) ---
+  const SILENT_AUDIO_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+  let bgAudioWorker = null;
+
+  function initBgAudioWorker() {
+    if (!bgAudioWorker) {
+      bgAudioWorker = new Audio(SILENT_AUDIO_WAV);
+      bgAudioWorker.loop = true;
+      bgAudioWorker.volume = 0.05;
+    }
+  }
+
+  function startBgAudioService() {
+    initBgAudioWorker();
+    bgAudioWorker.src = SILENT_AUDIO_WAV;
+    bgAudioWorker.loop = true;
+    bgAudioWorker.volume = 0.05;
+
+    bgAudioWorker.play().then(() => {
+      state.bgAudioActive = true;
+      localStorage.setItem('sep_ai_bg_audio', 'true');
+      updateBgAudioUI();
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: 'Sếp AI Remote (Đang trực ngầm)',
+          artist: 'Antigravity AI Assistant',
+          album: 'Sẵn sàng phát tiếng khi xong task'
+        });
+        navigator.mediaSession.playbackState = 'playing';
+
+        navigator.mediaSession.setActionHandler('play', () => {
+          if (bgAudioWorker) bgAudioWorker.play();
+          navigator.mediaSession.playbackState = 'playing';
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          if (bgAudioWorker) bgAudioWorker.pause();
+          navigator.mediaSession.playbackState = 'paused';
+        });
+      }
+      showVoiceToast('TRỰC ÂM THANH ĐÃ BẬT', 'Đã kích hoạt chế độ trực ngầm. Giờ Sếp có thể khóa màn hình hoặc mở app khác thoải mái!');
+      playVietnameseAudio('Chế độ trực âm thanh ngầm đã sẵn sàng rồi Sếp ạ.');
+    }).catch(err => {
+      console.warn('[BgAudio] Trình duyệt chặn autoplay:', err);
+      alert('Vui lòng chạm vào màn hình hoặc bấm nút để cấp quyền âm thanh nền!');
+    });
+  }
+
+  function stopBgAudioService() {
+    if (bgAudioWorker) {
+      bgAudioWorker.pause();
+    }
+    state.bgAudioActive = false;
+    localStorage.setItem('sep_ai_bg_audio', 'false');
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'none';
+    }
+    updateBgAudioUI();
+    showVoiceToast('TRỰC ÂM THANH', 'Đã tắt chế độ trực âm thanh ngầm.');
+  }
+
+  function toggleBgAudioService() {
+    if (state.bgAudioActive) {
+      stopBgAudioService();
+    } else {
+      startBgAudioService();
+    }
+  }
+
+  function updateBgAudioUI() {
+    const badge = document.getElementById('bg-audio-status-badge');
+    const btn = document.getElementById('btn-toggle-bg-audio');
+    if (badge) {
+      badge.innerText = state.bgAudioActive ? '🟢 ĐANG TRỰC NGẦM' : '⏸️ CHƯA BẬT';
+      badge.style.background = state.bgAudioActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.08)';
+      badge.style.color = state.bgAudioActive ? '#34D399' : 'var(--text-muted)';
+      badge.style.border = state.bgAudioActive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255,255,255,0.1)';
+    }
+    if (btn) {
+      btn.innerText = state.bgAudioActive ? '⏹️ Tắt chế độ Trực âm thanh' : '🎧 Bật chế độ Trực âm thanh ngay';
+      btn.style.background = state.bgAudioActive ? 'rgba(239, 68, 68, 0.2)' : 'var(--primary)';
+      btn.style.color = state.bgAudioActive ? '#EF4444' : '#FFFFFF';
+      btn.style.border = state.bgAudioActive ? '1px solid rgba(239, 68, 68, 0.4)' : 'none';
+    }
+  }
+
+  // --- THÔNG BÁO HỆ THỐNG & RUNG ĐIỆN THOẠI ---
+  async function requestSystemNotificationPermission() {
+    if (!('Notification' in window)) {
+      alert('Trình duyệt của Sếp không hỗ trợ Notification API.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    updateNotifPermissionUI();
+    if (permission === 'granted') {
+      showSystemNotification('🎉 Sếp AI Remote', 'Đã cấp quyền thông báo hệ thống thành công!', 'Đã bật thông báo');
+      playVietnameseAudio('Đã bật thông báo hệ thống thành công rồi Sếp ạ.');
+    }
+  }
+
+  function updateNotifPermissionUI() {
+    const btn = document.getElementById('btn-request-notif');
+    if (!btn) return;
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        btn.innerText = '✅ Đã cấp quyền thông báo màn hình khóa';
+        btn.style.background = 'rgba(16, 185, 129, 0.15)';
+        btn.style.color = '#34D399';
+        btn.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+        state.systemNotificationGranted = true;
+      } else if (Notification.permission === 'denied') {
+        btn.innerText = '❌ Bị chặn (Vào Cài đặt trang web trên trình duyệt để Bật)';
+        btn.style.background = 'rgba(239, 68, 68, 0.15)';
+        btn.style.color = '#EF4444';
+        btn.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+      } else {
+        btn.innerText = '🔔 Cấp quyền Thông báo Hệ thống';
+        btn.style.background = 'var(--surface-light)';
+        btn.style.color = 'var(--accent)';
+      }
+    }
+  }
+
+  function showSystemNotification(title, body, ttsText) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title: title,
+          body: body,
+          ttsText: ttsText
+        });
+      } else {
+        try {
+          new Notification(title, {
+            body: body,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png'
+          });
+        } catch (_) {}
+      }
+    }
+  }
+
+  // --- HÀM PHÁT THÔNG BÁO THÔNG MINH (KỂ CẢ KHI Ở APP KHÁC / TẮT MÀN HÌNH) ---
+  function playVoiceNotification(text) {
+    if (!text || !text.trim()) return;
+
+    // 1. Nếu đang bật chế độ trực ngầm, đổi src sang TTS và phát
+    if (state.bgAudioActive && bgAudioWorker) {
+      const audioUrl = `/api/tts?text=${encodeURIComponent(text.trim())}`;
+      bgAudioWorker.src = audioUrl;
+      bgAudioWorker.loop = false;
+      bgAudioWorker.volume = 1.0;
+
+      bgAudioWorker.play().then(() => {
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: '📢 Đang đọc báo cáo task',
+            artist: 'Sếp AI Remote',
+            album: text.substring(0, 45)
+          });
+          navigator.mediaSession.playbackState = 'playing';
+        }
+      }).catch(err => {
+        console.warn('[BgAudio] Lỗi phát voice qua worker, fallback:', err);
+        playVietnameseAudio(text);
+      });
+
+      bgAudioWorker.onended = () => {
+        // Trở lại silent audio loop để tiếp tục trực
+        bgAudioWorker.src = SILENT_AUDIO_WAV;
+        bgAudioWorker.loop = true;
+        bgAudioWorker.volume = 0.05;
+        bgAudioWorker.play().catch(() => {});
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: 'Sếp AI Remote (Đang trực ngầm)',
+            artist: 'Antigravity AI Assistant',
+            album: 'Sẵn sàng phát tiếng khi xong task'
+          });
+          navigator.mediaSession.playbackState = 'playing';
+        }
+      };
+    } else {
+      playVietnameseAudio(text);
+    }
+
+    // 2. Rung máy
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate([250, 100, 250, 100, 500]);
+      } catch (_) {}
+    }
+
+    // 3. Đẩy thông báo hệ thống lên màn hình khóa
+    showSystemNotification('🎉 Sếp AI: Đã hoàn thành task!', text, text);
+  }
+
+  // --- THỬ NGHIỆM PHÁT TIẾNG SAU 5 GIÂY ---
+  let testCountdownTimer = null;
+  function startTestCountdown() {
+    if (testCountdownTimer) clearInterval(testCountdownTimer);
+    let count = 5;
+    showVoiceToast('THỬ NGHIỆM CHẠY NGẦM', `Chuẩn bị thử sau ${count}s. Sếp hãy KHÓA MÀN HÌNH hoặc MỞ APP KHÁC ngay bây giờ!`);
+
+    testCountdownTimer = setInterval(() => {
+      count--;
+      if (count > 0) {
+        const toast = document.getElementById('voice-toast-banner');
+        if (toast) {
+          const bodyEl = toast.querySelector('div:nth-child(2)');
+          if (bodyEl) bodyEl.innerText = `Còn ${count}s... Sếp hãy khóa màn hình hoặc chuyển sang app khác để thử nhé!`;
+        }
+      } else {
+        clearInterval(testCountdownTimer);
+        testCountdownTimer = null;
+        playVoiceNotification('Dạ em chào Sếp Nam! Đây là giọng nói thông báo tự động khi Sếp đang ở ứng dụng khác hoặc đã khóa màn hình điện thoại ạ.');
+      }
+    }, 1000);
+  }
+
   function showVoiceToast(title, voiceText, isError = false) {
     const existing = document.getElementById('voice-toast-banner');
     if (existing) existing.remove();
@@ -1432,6 +1730,9 @@
         fetchStatus();
         fetchSessions();
         fetchTasks();
+        fetchSettings();
+        updateNotifPermissionUI();
+        updateBgAudioUI();
       }
     } catch (err) {
       console.error('Lỗi auth:', err);
@@ -1491,9 +1792,18 @@
       const fallbackVoice = `Sếp Nam ơi, em đã làm xong task '${taskTitle}' mà sếp giao rồi. Sếp còn việc gì cần em làm nữa không ạ. Sếp vào kiểm tra task kia nhé.`;
       const ttsText = msg.payload.ttsVoiceText || fallbackVoice;
       if (document.getElementById('tts-auto-toggle').checked) {
-        playVietnameseAudio(ttsText);
+        playVoiceNotification(ttsText);
       }
       showVoiceToast(taskTitle, ttsText);
+    } else if (msg.event === 'task_failed') {
+      fetchTasks();
+      const taskTitle = msg.payload.title || '';
+      const fallbackVoice = `Sếp Nam ơi, task '${taskTitle}' gặp lỗi trong lúc chạy rồi ạ. Sếp vào kiểm tra nhé.`;
+      const ttsText = msg.payload.ttsVoiceText || fallbackVoice;
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVoiceNotification(ttsText);
+      }
+      showVoiceToast(taskTitle, ttsText, true);
     }
   }
 
@@ -1534,6 +1844,88 @@
         state.activeSessionId = state.sessions[0].sessionId;
       }
       renderSessionsAndProjects();
+    }
+  }
+
+  // 4b. CÀI ĐẶT & TELEGRAM VOICE BOT
+  async function fetchSettings() {
+    try {
+      const res = await fetch('/api/settings', { headers: { 'Authorization': `Bearer ${state.token}` } });
+      const data = await res.json();
+      if (data.success && data.settings) {
+        state.telegramSettings = {
+          botToken: data.settings.telegram_bot_token || '',
+          chatId: data.settings.telegram_chat_id || '',
+          enabled: data.settings.telegram_enabled !== 'false'
+        };
+        const tokenInput = document.getElementById('setting-telegram-token');
+        const chatInput = document.getElementById('setting-telegram-chatid');
+        const enabledCheck = document.getElementById('setting-telegram-enabled');
+        if (tokenInput) tokenInput.value = state.telegramSettings.botToken;
+        if (chatInput) chatInput.value = state.telegramSettings.chatId;
+        if (enabledCheck) enabledCheck.checked = state.telegramSettings.enabled;
+      }
+    } catch (e) {
+      console.warn('Lỗi fetchSettings:', e);
+    }
+  }
+
+  async function saveTelegramSettings() {
+    const token = (document.getElementById('setting-telegram-token').value || '').trim();
+    const chatId = (document.getElementById('setting-telegram-chatid').value || '').trim();
+    const enabled = document.getElementById('setting-telegram-enabled').checked ? 'true' : 'false';
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({
+          telegram_bot_token: token,
+          telegram_chat_id: chatId,
+          telegram_enabled: enabled
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showVoiceToast('CÀI ĐẶT TELEGRAM', 'Đã lưu cấu hình Telegram thành công!');
+        playVietnameseAudio('Đã lưu cấu hình Telegram thành công rồi Sếp ạ.');
+      } else {
+        alert('Lỗi: ' + data.error);
+      }
+    } catch (err) {
+      alert('Lỗi lưu cài đặt: ' + err.message);
+    }
+  }
+
+  async function testTelegramVoice() {
+    const token = (document.getElementById('setting-telegram-token').value || '').trim();
+    const chatId = (document.getElementById('setting-telegram-chatid').value || '').trim();
+    if (!token || !chatId) {
+      alert('Sếp vui lòng điền Bot Token và Chat ID trước khi bấm gửi thử nhé!');
+      return;
+    }
+    showVoiceToast('ĐANG GỬI TELEGRAM...', 'Đang tổng hợp giọng nói và gửi tới Telegram của Sếp...');
+    try {
+      const res = await fetch('/api/settings/telegram/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({ botToken: token, chatId: chatId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showVoiceToast('THÀNH CÔNG', 'Đã gửi file giọng nói vào Telegram! Sếp mở Telegram nghe thử nhé.');
+        playVietnameseAudio('Em đã gửi file tin nhắn thoại vào Telegram của Sếp rồi ạ.');
+      } else {
+        alert('Telegram báo lỗi: ' + (data.error || 'Không gửi được'));
+      }
+    } catch (err) {
+      alert('Lỗi kết nối Telegram: ' + err.message);
     }
   }
 
@@ -2172,12 +2564,37 @@
 
   function saveSettings() {
     initAuth();
-    alert('Đã lưu cài đặt!');
+    alert('Đã lưu mã ghép đôi thành công!');
+  }
+
+  // Lắng nghe Service Worker click thông báo
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'PLAY_TTS' && event.data.text) {
+        playVietnameseAudio(event.data.text);
+      }
+    });
+  }
+
+  // Tự động phát âm thanh nếu app được mở từ click thông báo màn hình khóa
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoPlayText = urlParams.get('autoPlayText');
+  if (autoPlayText) {
+    setTimeout(() => {
+      playVietnameseAudio(autoPlayText);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }, 800);
   }
 
   window.addEventListener('load', () => {
     updatePwaBannerVisibility();
     initAuth();
+
+    // Khôi phục trạng thái trực ngầm nếu trước đó đã bật
+    if (localStorage.getItem('sep_ai_bg_audio') === 'true') {
+      state.bgAudioActive = true;
+      updateBgAudioUI();
+    }
   });
 </script>
 </body>

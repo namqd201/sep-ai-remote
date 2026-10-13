@@ -54,6 +54,11 @@ export class AppDatabase {
         is_read INTEGER DEFAULT 0
       );
 
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+
       CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
       CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);
       CREATE INDEX IF NOT EXISTS idx_tasks_idempotency ON tasks(idempotency_key);
@@ -222,6 +227,29 @@ export class AppDatabase {
             taskId: r.task_id || undefined,
             createdAt: r.created_at
         }));
+    }
+    // --- Settings Management ---
+    getSetting(key) {
+        const stmt = this.db.prepare('SELECT value FROM settings WHERE key = ?');
+        const row = stmt.get(key);
+        return row ? row.value : null;
+    }
+    setSetting(key, value) {
+        const stmt = this.db.prepare(`
+      INSERT INTO settings (key, value)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `);
+        stmt.run(key, value);
+    }
+    getAllSettings() {
+        const stmt = this.db.prepare('SELECT key, value FROM settings');
+        const rows = stmt.all();
+        const result = {};
+        for (const r of rows) {
+            result[r.key] = r.value;
+        }
+        return result;
     }
     mapTask(row) {
         return {
