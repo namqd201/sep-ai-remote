@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Sếp AI Remote",
-  "short_name": "Sếp AI",
-  "description": "Mobile Voice Control & Realtime Monitor for Antigravity",
+  "name": "Nhân viên quèn",
+  "short_name": "Nhân viên quèn",
+  "description": "Nhân viên quèn — Trợ lý AI báo cáo công việc cho Sếp Nam",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -72,12 +72,12 @@ export class TelegramService {
         return { success: false, error: 'Vui lòng nhập đầy đủ Bot Token và Chat ID.' };
       }
 
-      const testText = 'Dạ em chào Sếp Nam! Đây là tin nhắn thoại thử nghiệm từ Sếp AI Remote qua Telegram ạ.';
+      const testText = 'Dạ em chào Sếp Nam! Đây là tin nhắn thoại thử nghiệm từ Nhân viên quèn qua Telegram ạ.';
       const audioBuffer = await this.getTtsBuffer(testText);
 
       const formData = new FormData();
       formData.append('chat_id', chatId.trim());
-      formData.append('caption', '🧪 [Test Thông Báo Giọng Nói Sếp AI Remote]\n\nDạ em chào Sếp Nam! Kết nối Telegram Bot thành công mỹ mãn rồi ạ.');
+      formData.append('caption', '🧪 [Test Thông Báo Giọng Nói — Nhân viên quèn]\n\nDạ em chào Sếp Nam! Kết nối Telegram Bot thành công mỹ mãn rồi ạ.');
       const blob = new Blob([audioBuffer as any], { type: 'audio/mpeg' });
       formData.append('voice', blob, 'sep_ai_test_voice.mp3');
 

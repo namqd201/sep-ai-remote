@@ -63,7 +63,7 @@ if (isCloudEnvironment) {
   }
 
   console.log('========================================================');
-  console.log('🚀 SẾP AI REMOTE — ĐIỀU KHIỂN ANTIGRAVITY BẰNG GIỌNG NÓI');
+  console.log('🚀 NHÂN VIÊN QUÈN — BÁO CÁO CÔNG VIỆC CHO SẾP NAM');
   console.log('========================================================');
   console.log(`💻 PC Localhost:             http://localhost:3000`);
   console.log(`📱 Link Mạng Wi-Fi (LAN):    http://${lanIp}:3000`);

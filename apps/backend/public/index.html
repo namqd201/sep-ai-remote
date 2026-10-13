@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Sếp AI Remote — Mobile Control</title>
+  <title>Nhân viên quèn — Trợ lý Sếp Nam</title>
   
   <!-- PWA Meta Tags & Shortcut Icons -->
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sếp AI">
+  <meta name="apple-mobile-web-app-title" content="Nhân viên quèn">
   <meta name="theme-color" content="#2563EB">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -695,7 +695,7 @@
   <div id="pwa-install-banner" class="pwa-banner" onclick="handlePwaInstallClick()">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span>📱</span>
-      <span><b>Cài đặt ứng dụng Sếp AI Remote</b></span>
+      <span><b>Cài đặt ứng dụng Nhân viên quèn</b></span>
     </div>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span class="badge">Cài đặt 📲</span>
@@ -706,7 +706,7 @@
   <header>
     <div class="header-left">
       <button class="drawer-btn" onclick="toggleDrawer()">☰</button>
-      <h1><span>⚡</span> Sếp AI Remote</h1>
+      <h1><span>🙇‍♂️</span> Nhân viên quèn</h1>
     </div>
     <div id="ws-badge" style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
       <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning); display: inline-block;"></span>
@@ -974,7 +974,7 @@
       <div class="card">
         <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Shortcut Màn hình chính</h4>
         <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
-          Thêm Sếp AI Remote vào màn hình chính của điện thoại để mở nhanh như ứng dụng native không cần thanh địa chỉ trình duyệt.
+          Thêm "Nhân viên quèn" vào màn hình chính của điện thoại để mở nhanh như ứng dụng native không cần thanh địa chỉ trình duyệt.
         </p>
         <button class="btn" style="background: #1D4ED8;" onclick="showPwaInstructions()">
           📲 Hướng dẫn thêm Shortcut vào Màn hình chính
@@ -1258,7 +1258,7 @@
     if (banner && !checkIsAppInstalled()) {
       banner.style.display = 'flex';
       const bTitle = banner.querySelector('b');
-      if (bTitle) bTitle.innerText = 'Cài đặt ứng dụng Sếp AI Remote';
+      if (bTitle) bTitle.innerText = 'Cài đặt ứng dụng Nhân viên quèn';
       const badge = banner.querySelector('.badge');
       if (badge) badge.innerText = 'Cài đặt ngay 📲';
     }
@@ -1380,7 +1380,7 @@
 
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'Sếp AI Remote (Đang trực ngầm)',
+          title: 'Nhân viên quèn (Đang trực ngầm)',
           artist: 'Antigravity AI Assistant',
           album: 'Sẵn sàng phát tiếng khi xong task'
         });
@@ -1450,7 +1450,7 @@
     const permission = await Notification.requestPermission();
     updateNotifPermissionUI();
     if (permission === 'granted') {
-      showSystemNotification('🎉 Sếp AI Remote', 'Đã cấp quyền thông báo hệ thống thành công!', 'Đã bật thông báo');
+      showSystemNotification('🎉 Nhân viên quèn', 'Đã cấp quyền thông báo hệ thống thành công!', 'Đã bật thông báo');
       playVietnameseAudio('Đã bật thông báo hệ thống thành công rồi Sếp ạ.');
     }
   }
@@ -1514,7 +1514,7 @@
         if ('mediaSession' in navigator) {
           navigator.mediaSession.metadata = new MediaMetadata({
             title: '📢 Đang đọc báo cáo task',
-            artist: 'Sếp AI Remote',
+            artist: 'Nhân viên quèn',
             album: text.substring(0, 45)
           });
           navigator.mediaSession.playbackState = 'playing';
@@ -1532,7 +1532,7 @@
         bgAudioWorker.play().catch(() => {});
         if ('mediaSession' in navigator) {
           navigator.mediaSession.metadata = new MediaMetadata({
-            title: 'Sếp AI Remote (Đang trực ngầm)',
+            title: 'Nhân viên quèn (Đang trực ngầm)',
             artist: 'Antigravity AI Assistant',
             album: 'Sẵn sàng phát tiếng khi xong task'
           });
@@ -1551,7 +1551,7 @@
     }
 
     // 3. Đẩy thông báo hệ thống lên màn hình khóa
-    showSystemNotification('🎉 Sếp AI: Đã hoàn thành task!', text, text);
+    showSystemNotification('🎉 Nhân viên quèn: Đã xong việc sếp giao!', text, text);
   }
 
   // --- THỬ NGHIỆM PHÁT TIẾNG SAU 5 GIÂY ---
@@ -1719,7 +1719,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pairingCode: code,
-          deviceName: 'Sếp AI Mobile Web',
+          deviceName: 'Nhân viên quèn Mobile Web',
           deviceType: 'mobile'
         })
       });
