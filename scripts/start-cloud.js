@@ -7,7 +7,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-const assignedPort = String(process.env.SERVER_PORT || process.env.PORT || 3000);
+let assignedPort = process.env.SERVER_PORT || process.env.PORT;
+
+// Quét các biến môi trường tìm port
+if (!assignedPort) {
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.toLowerCase().includes('port') && /^\d+$/.test(value)) {
+      assignedPort = value;
+      break;
+    }
+  }
+}
+
+// Nếu chạy trên Linux container Botkeep mà chưa có biến PORT, dùng cổng 43622 đã cấp
+if (!assignedPort && process.platform === 'linux') {
+  assignedPort = '43622';
+}
+
+assignedPort = String(assignedPort || '3000');
 process.env.PORT = assignedPort;
 
 // Cấu hình múi giờ Việt Nam (GMT+7)
