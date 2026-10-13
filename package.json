@@ -4,15 +4,20 @@
   "description": "Sếp AI Remote - Mobile Voice Control & Realtime Monitor for Antigravity",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "build": "pnpm -r run build",
     "test": "node --test apps/backend/dist/tests/backend.test.js apps/windows-bridge/dist/tests/bridge.test.js",
-    "start": "node scripts/start-all.js",
+    "start": "node scripts/start-cloud.js",
+    "start:local": "node scripts/start-all.js",
+    "start:backend": "node scripts/start-backend.js",
+    "start:bridge": "node scripts/start-bridge.js",
     "tunnel": "node scripts/tunnel.js",
     "queue:list": "node scripts/task-queue-cli.js list",
-    "queue:next": "node scripts/task-queue-cli.js next",
-    "start:backend": "node scripts/start-backend.js",
-    "start:bridge": "node scripts/start-bridge.js"
+    "queue:next": "node scripts/task-queue-cli.js next"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

@@ -3,9 +3,10 @@ node_modules/
 .pnpm-store/
 
 # Build artifacts
-dist/
 build/
 *.tsbuildinfo
+apps/windows-bridge/dist/
+
 
 # Environment variables & secrets
 .env

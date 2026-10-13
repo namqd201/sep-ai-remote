@@ -1,0 +1,48 @@
+import { TaskReport } from './task.js';
+export declare enum WsEventType {
+    AUTHENTICATE = "authenticate",
+    AUTHENTICATED = "authenticated",
+    AUTH_ERROR = "auth_error",
+    PING = "ping",
+    PONG = "pong",
+    BRIDGE_STATUS = "bridge_status",
+    SESSIONS_UPDATED = "sessions_updated",
+    TASK_EVENT = "task_event",
+    REPORT_READY = "report_ready",
+    NEW_TASK = "new_task",
+    DISPATCH_TASK = "dispatch_task",
+    TASK_STATUS_UPDATED = "task_status_updated",
+    TASK_COMPLETED = "task_completed",
+    TASK_FAILED = "task_failed",
+    APPROVAL_REQUIRED = "approval_required",
+    CHAT_MESSAGE = "chat_message",
+    NOTIFICATION = "notification"
+}
+export interface WsMessage<T = unknown> {
+    event: WsEventType;
+    payload: T;
+    timestamp: string;
+}
+export interface TaskCompletedPayload {
+    taskId: string;
+    sessionId: string;
+    title: string;
+    summary: string;
+    ttsVoiceText: string;
+    report?: TaskReport;
+}
+export interface ApprovalRequiredPayload {
+    taskId: string;
+    sessionId: string;
+    actionRequired: string;
+    reason: string;
+}
+export interface NotificationPayload {
+    id: string;
+    title: string;
+    body: string;
+    type: 'task_completed' | 'task_failed' | 'approval_required' | 'pc_status';
+    taskId?: string;
+    timestamp: string;
+}
+//# sourceMappingURL=websocket.d.ts.map
