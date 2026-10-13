@@ -625,20 +625,31 @@ export class AntigravityAdapter implements IAntigravityAdapter {
         lastModelStep.tool_calls.length > 0;
 
       if (!hasOtherTools && text.length > 0) {
+        const paragraphs = text.split(/\n\s*\n/).filter(Boolean);
+        const lastPara = paragraphs.length > 0 ? paragraphs[paragraphs.length - 1].trim() : text;
+
+        const isExplicitCompletion =
+          /\b(đã hoàn thành|hoàn tất nhiệm vụ|đã hoàn thành xong|đã làm xong|đã triển khai và hoàn thiện|đã xong|hoàn tất)\b/i.test(text);
+
+        const hasQuestionMark = /\?|？/.test(lastPara);
+        const hasQuestionWords = /\b(bạn có muốn|anh có muốn|sếp có muốn|sếp thấy sao|sếp nghĩ sao|tiếp tục không|chọn phương án nào|cần sếp duyệt|cần sếp xác nhận|chờ sếp xác nhận|chờ confirm)\b/i.test(lastPara);
+
+        // Nếu có từ khóa hoàn thành rõ ràng và câu cuối không phải câu hỏi cần chọn -> Coi như đã xong
+        if (isExplicitCompletion && !hasQuestionMark && !hasQuestionWords) {
+          return { needsConfirmation: false };
+        }
+
         const confirmationPatterns = [
           /\?|？/,
-          /\b(confirm|xác nhận|đồng ý|đề xuất|phương án|lựa chọn|cho ý kiến|duyệt)\b/i,
-          /\b(bạn có muốn|anh có muốn|sếp có muốn|bạn thấy sao|bạn nghĩ sao|tiếp tục không)\b/i,
+          /\b(bạn muốn chọn|anh muốn chọn|sếp muốn chọn|chọn phương án nào|bạn chọn cách nào)\b/i,
+          /\b(cần sếp duyệt|cần sếp xác nhận|chờ sếp xác nhận|chờ xác nhận|chờ confirm|vui lòng xác nhận|xin ý kiến)\b/i,
+          /\b(bạn có muốn|anh có muốn|sếp có muốn|tiếp tục không)\b/i,
           /\b(should i|would you like|do you want|please confirm|proceed with|approve)\b/i
         ];
 
-        const isAskingConfirmation = confirmationPatterns.some((pattern) => pattern.test(text));
+        const isAskingConfirmation = confirmationPatterns.some((pattern) => pattern.test(lastPara));
 
-        const isPureCompletion =
-          /\b(đã hoàn thành|hoàn tất nhiệm vụ|đã hoàn thành xong task|đã làm xong)\b/i.test(text) &&
-          !/\b(đề xuất|chọn phương án|bạn muốn chọn|bạn chọn cách nào|sếp xem xét)\b/i.test(text);
-
-        if (isAskingConfirmation && !isPureCompletion) {
+        if (isAskingConfirmation) {
           return {
             needsConfirmation: true,
             proposalText: text
