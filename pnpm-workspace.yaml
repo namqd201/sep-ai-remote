@@ -1,0 +1,10 @@
+packages:
+  - 'packages/*'
+  - 'apps/backend'
+  - 'apps/windows-bridge'
+  - 'apps/mobile-web'
+
+onlyBuiltDependencies:
+  - 'esbuild'
+allowBuilds:
+  esbuild: true

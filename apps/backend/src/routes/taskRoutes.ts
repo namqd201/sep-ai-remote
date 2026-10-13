@@ -1,0 +1,96 @@
+import { Router, Response, Request } from 'express';
+import { authService, AuthenticatedRequest } from '../services/authService.js';
+import { taskService } from '../services/taskService.js';
+import { CreateTaskDto, TaskStatus } from '@sep-ai/shared';
+
+const router = Router();
+
+// Middleware cho phép gọi nội bộ từ localhost (cho Antigravity agent) hoặc qua xác thực JWT
+const allowLocalOrAuth = (req: Request, res: Response, next: () => void) => {
+  const ip = req.ip || req.socket.remoteAddress || '';
+  if (ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1')) {
+    return next();
+  }
+  return authService.authenticateMiddleware(req as AuthenticatedRequest, res, next);
+};
+
+// 1. Lấy danh sách task (có lọc theo status)
+router.get('/', allowLocalOrAuth, (req, res) => {
+  const status = req.query.status as TaskStatus | undefined;
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+  const tasks = taskService.listTasks(status, limit);
+  res.json({ success: true, tasks });
+});
+
+// 2. Lấy danh sách hàng đợi chờ làm (Task Queue / Pending)
+router.get('/queue', allowLocalOrAuth, (req, res) => {
+  const tasks = taskService.getWaitingQueueTasks();
+  res.json({ success: true, count: tasks.length, tasks });
+});
+
+// 3. Kích hoạt lấy và chạy task tiếp theo trong hàng đợi (Next Task)
+router.post('/queue/next', allowLocalOrAuth, (req, res) => {
+  const result = taskService.executeNextInQueue();
+  if (!result.success) {
+    res.status(400).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+// 4. Kích hoạt chạy một task cụ thể từ hàng đợi
+router.post('/:id/execute', allowLocalOrAuth, (req, res) => {
+  const result = taskService.executeQueuedTask(req.params.id);
+  if (!result.success) {
+    res.status(400).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+// 5. Xóa / Hủy một task khỏi hàng đợi
+router.delete('/:id', allowLocalOrAuth, (req, res) => {
+  const ok = taskService.deleteQueuedTask(req.params.id);
+  if (!ok) {
+    res.status(404).json({ error: 'Không tìm thấy task để xóa' });
+    return;
+  }
+  res.json({ success: true, message: 'Đã xóa task khỏi danh sách chờ' });
+});
+
+// 6. Tạo task mới (Hỗ trợ cờ isQueued để thêm vào danh sách chờ)
+router.post('/', allowLocalOrAuth, (req: Request, res: Response) => {
+  const body = req.body as CreateTaskDto;
+  if (!body.prompt || body.prompt.trim() === '') {
+    res.status(400).json({ error: 'Nội dung prompt không được để trống' });
+    return;
+  }
+
+  const deviceId = (req as AuthenticatedRequest).user?.deviceId || 'antigravity_pc';
+  const { task, isDuplicate } = taskService.createTask(body, deviceId);
+
+  res.status(isDuplicate ? 200 : 201).json({
+    success: true,
+    task,
+    isDuplicate,
+    message: isDuplicate
+      ? 'Task đã tồn tại (Chống gửi trùng lặp qua Idempotency Key)'
+      : task.status === TaskStatus.PENDING
+        ? 'Task đã được lưu vào Danh sách chờ. Sếp có thể bấm kích hoạt hoặc bảo Antigravity tự vào lấy làm.'
+        : task.status === TaskStatus.QUEUED_OFFLINE
+          ? 'PC đang offline. Task đã được lưu vào hàng đợi để chạy khi PC kết nối lại.'
+          : 'Task đã được chuyển tới agent Antigravity thành công.'
+  });
+});
+
+// 7. Lấy chi tiết một task
+router.get('/:id', allowLocalOrAuth, (req, res) => {
+  const task = taskService.getTask(req.params.id);
+  if (!task) {
+    res.status(404).json({ error: 'Không tìm thấy task' });
+    return;
+  }
+  res.json({ success: true, task });
+});
+
+export default router;

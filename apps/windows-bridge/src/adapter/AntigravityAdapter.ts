@@ -1,0 +1,511 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { DatabaseSync } from 'node:sqlite';
+import { config } from '../config.js';
+import { IAntigravityAdapter, ActionResult } from './IAntigravityAdapter.js';
+import {
+  AgentSessionSummary,
+  AgentSessionMetadata,
+  ProjectGroup,
+  SessionStatus,
+  TaskReport,
+  TaskStatus,
+  TaskEvent,
+  DEFAULT_TTS_COMPLETION_PHRASE,
+  getVietnamNowIso,
+  getTaskCompletionVoiceText
+} from '@sep-ai/shared';
+
+const execFileAsync = promisify(execFile);
+
+export class AntigravityAdapter implements IAntigravityAdapter {
+  private dbPath: string;
+  private subscribers: Set<(event: TaskEvent) => void> = new Set();
+  private sessionStateCache: Map<string, { status: string; notFullyIdle: boolean }> = new Map();
+  private activeTaskBySession: Map<string, { taskId: string; title: string }> = new Map();
+  private pollTimer: NodeJS.Timeout | null = null;
+
+  constructor() {
+    this.dbPath = path.join(config.antigravityAppDataDir, 'conversation_summaries.db');
+  }
+
+  public setActiveTaskForSession(sessionId: string, taskId: string, title: string): void {
+    this.activeTaskBySession.set(sessionId, { taskId, title });
+  }
+
+  public getActiveTaskForSession(sessionId: string): { taskId: string; title: string } | undefined {
+    return this.activeTaskBySession.get(sessionId);
+  }
+
+  public clearActiveTaskForSession(sessionId: string): void {
+    this.activeTaskBySession.delete(sessionId);
+  }
+
+  public async getConnectionStatus(): Promise<{
+    isAvailable: boolean;
+    hasAgentApi: boolean;
+    hasDatabase: boolean;
+    activeSessionsCount: number;
+    details: string;
+  }> {
+    const hasAgentApi = fs.existsSync(config.agentapiPath);
+    const hasDatabase = fs.existsSync(this.dbPath);
+    let activeSessionsCount = 0;
+
+    if (hasDatabase) {
+      try {
+        const sessions = await this.getAvailableSessions();
+        activeSessionsCount = sessions.length;
+      } catch (err) {
+        console.warn('[Adapter] Lỗi kiểm tra database:', err);
+      }
+    }
+
+    return {
+      isAvailable: hasAgentApi || hasDatabase,
+      hasAgentApi,
+      hasDatabase,
+      activeSessionsCount,
+      details: `AgentAPI: ${hasAgentApi ? 'Found' : 'Missing'}, DB: ${hasDatabase ? 'Found' : 'Missing'}`
+    };
+  }
+
+  public async getAvailableSessions(): Promise<AgentSessionSummary[]> {
+    if (!fs.existsSync(this.dbPath)) {
+      return [];
+    }
+
+    try {
+      const db = new DatabaseSync(this.dbPath, { readOnly: true });
+      const rows = db
+        .prepare(`
+          SELECT conversation_id, title, status, not_fully_idle,
+                 workspace_uris, last_modified_time, step_count, preview
+          FROM conversation_summaries
+          ORDER BY last_modified_time DESC
+          LIMIT 20
+        `)
+        .all() as Record<string, unknown>[];
+
+      return rows.map((row) => {
+        const rawStatus = (row.status as string) || '';
+        const isNotFullyIdle = Boolean(row.not_fully_idle);
+        const status =
+          rawStatus === 'CASCADE_RUN_STATUS_RUNNING' || isNotFullyIdle
+            ? SessionStatus.RUNNING
+            : SessionStatus.IDLE;
+
+        let workspacePath: string | undefined;
+        let projectName = 'sep-ai-remote';
+        try {
+          const uris = JSON.parse((row.workspace_uris as string) || '[]');
+          if (Array.isArray(uris) && uris.length > 0) {
+            workspacePath = decodeURIComponent(uris[0].replace('file:///', ''));
+            const clean = workspacePath.replace(/\\/g, '/');
+            const parts = clean.split('/').filter(Boolean);
+            projectName = parts[parts.length - 1] || 'sep-ai-remote';
+          }
+        } catch {
+          // ignore parse error
+        }
+
+        const lastModified = (row.last_modified_time as string) || new Date().toISOString();
+        let timeAgo = '';
+        try {
+          const diffMs = Date.now() - new Date(lastModified).getTime();
+          const diffMin = Math.floor(diffMs / 60000);
+          const diffHour = Math.floor(diffMin / 60);
+          const diffDay = Math.floor(diffHour / 24);
+          const diffMonth = Math.floor(diffDay / 30);
+          if (diffMin < 1) timeAgo = 'vừa xong';
+          else if (diffMin < 60) timeAgo = `${diffMin}m`;
+          else if (diffHour < 24) timeAgo = `${diffHour}h`;
+          else if (diffDay < 30) timeAgo = `${diffDay}d`;
+          else timeAgo = `${diffMonth}mo`;
+        } catch {
+          timeAgo = '';
+        }
+
+        const rawTitle = ((row.title as string) || '').trim();
+        const rawPreview = ((row.preview as string) || '').trim();
+        let title = rawTitle;
+        if (!title && rawPreview) {
+          title = rawPreview.split('\n')[0].trim();
+        }
+        if (!title) {
+          title = 'Untitled Conversation';
+        }
+
+        return {
+          sessionId: row.conversation_id as string,
+          title,
+          status,
+          isNotFullyIdle,
+          workspacePath,
+          projectName,
+          lastModifiedTime: lastModified,
+          timeAgo,
+          stepCount: (row.step_count as number) || 0,
+          preview: rawPreview || undefined
+        };
+      });
+    } catch (err) {
+      console.error('[Adapter] Lỗi đọc conversation_summaries.db:', err);
+      return [];
+    }
+  }
+
+  public async getProjectGroups(): Promise<ProjectGroup[]> {
+    const sessions = await this.getAvailableSessions();
+    const map = new Map<string, ProjectGroup>();
+
+    for (const s of sessions) {
+      if (!map.has(s.projectName)) {
+        map.set(s.projectName, {
+          projectName: s.projectName,
+          workspacePath: s.workspacePath,
+          sessions: []
+        });
+      }
+      map.get(s.projectName)!.sessions.push(s);
+    }
+
+    return Array.from(map.values());
+  }
+
+  private async executeAgentApi(subCommandArgs: string[]): Promise<{ stdout: string; stderr: string }> {
+    if (fs.existsSync(config.languageServerExe)) {
+      return execFileAsync(config.languageServerExe, ['agentapi', ...subCommandArgs], { shell: false });
+    }
+    // Fallback qua agentapi.bat
+    return execFileAsync(config.agentapiPath, subCommandArgs, { shell: true });
+  }
+
+  public async getSessionMetadata(sessionId: string): Promise<ActionResult<AgentSessionMetadata>> {
+    if (!fs.existsSync(config.languageServerExe) && !fs.existsSync(config.agentapiPath)) {
+      return {
+        success: false,
+        isUnsupported: true,
+        error: 'Không tìm thấy language_server.exe hoặc agentapi.bat trên hệ thống'
+      };
+    }
+
+    try {
+      const { stdout } = await this.executeAgentApi(['get-conversation-metadata', sessionId]);
+
+      const parsed = JSON.parse(stdout);
+      const meta = parsed?.response?.conversationMetadata?.metadata;
+      if (!meta) {
+        return { success: false, error: 'Metadata trả về không hợp lệ' };
+      }
+
+      const workspaces = (meta.workspaces || []).map((w: Record<string, unknown>) => ({
+        absoluteUri: (w.workspaceFolderAbsoluteUri as string) || '',
+        gitRoot: (w.gitRootAbsoluteUri as string) || undefined,
+        branchName: (w.branchName as string) || undefined
+      }));
+
+      return {
+        success: true,
+        data: {
+          sessionId,
+          rootConversationId: meta.rootConversationId || sessionId,
+          projectId: meta.projectId,
+          workspaces,
+          createdAt: meta.createdAt || getVietnamNowIso()
+        }
+      };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  public async sendMessageToSession(
+    sessionId: string,
+    message: string,
+    title?: string
+  ): Promise<ActionResult<{ delivered: boolean }>> {
+    if (!fs.existsSync(config.languageServerExe) && !fs.existsSync(config.agentapiPath)) {
+      return {
+        success: false,
+        isUnsupported: true,
+        error: 'language_server.exe / agentapi.bat không có sẵn để gửi prompt vào phiên'
+      };
+    }
+
+    try {
+      const args: string[] = ['send-message'];
+      if (title) {
+        const cleanTitle = title.replace(/[\r\n]+/g, ' ').replace(/"/g, '').substring(0, 60).trim();
+        if (cleanTitle) {
+          args.push(`--title=${cleanTitle}`);
+        }
+      }
+      args.push(sessionId, message);
+
+      const { stdout, stderr } = await this.executeAgentApi(args);
+      console.log(`[Adapter] Đã gửi message tới session ${sessionId}:`, stdout.trim() || stderr.trim());
+
+      return {
+        success: true,
+        data: { delivered: true }
+      };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[Adapter] Lỗi gửi message tới session ${sessionId}:`, errorMsg);
+      return {
+        success: false,
+        error: errorMsg
+      };
+    }
+  }
+
+  public async createNewSession(
+    prompt: string,
+    title?: string,
+    model?: 'flash_lite' | 'flash' | 'pro'
+  ): Promise<ActionResult<{ sessionId?: string; output: string }>> {
+    if (!fs.existsSync(config.languageServerExe) && !fs.existsSync(config.agentapiPath)) {
+      return {
+        success: false,
+        isUnsupported: true,
+        error: 'language_server.exe / agentapi.bat không có sẵn để tạo phiên mới'
+      };
+    }
+
+    try {
+      const args: string[] = ['new-conversation'];
+      if (model) args.push(`--model=${model}`);
+      if (title) {
+        const cleanTitle = title.replace(/[\r\n]+/g, ' ').replace(/"/g, '').substring(0, 60).trim();
+        if (cleanTitle) {
+          args.push(`--title=${cleanTitle}`);
+        }
+      }
+      args.push(prompt);
+
+      const { stdout } = await this.executeAgentApi(args);
+      return {
+        success: true,
+        data: { output: stdout.trim() }
+      };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  public async getTaskStatus(sessionId: string): Promise<TaskStatus> {
+    const sessions = await this.getAvailableSessions();
+    const session = sessions.find((s) => s.sessionId === sessionId);
+    if (!session) return TaskStatus.PENDING;
+
+    if (session.status === SessionStatus.RUNNING || session.isNotFullyIdle) {
+      return TaskStatus.RUNNING;
+    }
+    return TaskStatus.COMPLETED;
+  }
+
+  public async getTaskReport(sessionId: string): Promise<TaskReport> {
+    const now = new Date().toISOString();
+    let summary = 'Task đã kết thúc.';
+    const filesModified: string[] = [];
+    let testResults: string | undefined;
+    let errorDetails: string | undefined;
+
+    // 1. Đọc transcript.jsonl nếu có
+    const transcriptPath = path.join(
+      config.antigravityAppDataDir,
+      'brain',
+      sessionId,
+      '.system_generated',
+      'logs',
+      'transcript.jsonl'
+    );
+
+    if (fs.existsSync(transcriptPath)) {
+      try {
+        const content = fs.readFileSync(transcriptPath, 'utf-8');
+        const lines = content.trim().split('\n');
+        const recentLines = lines.slice(-25);
+
+        for (const line of recentLines) {
+          try {
+            const step = JSON.parse(line);
+            if (step.tool_calls && Array.isArray(step.tool_calls)) {
+              for (const call of step.tool_calls) {
+                if (call.name === 'write_to_file' || call.name === 'replace_file_content') {
+                  const target = call.args?.TargetFile;
+                  if (target && !filesModified.includes(target)) {
+                    filesModified.push(target);
+                  }
+                }
+              }
+            }
+            if (step.type === 'PLANNER_RESPONSE' && step.content) {
+              summary = step.content.substring(0, 300);
+            }
+            if (step.status === 'ERROR') {
+              errorDetails = step.content || 'Gặp lỗi trong quá trình thực thi tool.';
+            }
+          } catch {
+            // ignore JSON parse line
+          }
+        }
+      } catch (err) {
+        console.warn('[Adapter] Lỗi đọc transcript.jsonl:', err);
+      }
+    }
+
+    // 2. Đọc artifacts report nếu có
+    const brainDir = path.join(config.antigravityAppDataDir, 'brain', sessionId);
+    if (fs.existsSync(brainDir)) {
+      try {
+        const files = fs.readdirSync(brainDir);
+        const mdFiles = files.filter((f) => f.endsWith('.md'));
+        if (mdFiles.length > 0) {
+          const latestMd = path.join(brainDir, mdFiles[0]);
+          const mdContent = fs.readFileSync(latestMd, 'utf-8');
+          summary = mdContent.split('\n').slice(0, 5).join(' ');
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const activeInfo = this.activeTaskBySession.get(sessionId);
+    const voiceNotificationText = getTaskCompletionVoiceText(activeInfo?.title);
+
+    return {
+      summary,
+      filesModified,
+      testResults,
+      errorDetails,
+      voiceNotificationText,
+      completedAt: getVietnamNowIso()
+    };
+  }
+
+  public subscribeToTaskEvents(callback: (event: TaskEvent) => void): () => void {
+    this.subscribers.add(callback);
+
+    if (!this.pollTimer) {
+      this.startPollingObserver();
+    }
+
+    return () => {
+      this.subscribers.delete(callback);
+      if (this.subscribers.size === 0 && this.pollTimer) {
+        clearInterval(this.pollTimer);
+        this.pollTimer = null;
+      }
+    };
+  }
+
+  /**
+   * Phương thức gọi khi HookServer nhận được sự kiện Stop trực tiếp từ Antigravity
+   */
+  public handleDirectHookStop(payload: {
+    conversationId: string;
+    terminationReason?: string;
+    error?: string;
+    fullyIdle?: boolean;
+  }): void {
+    const sessionId = payload.conversationId;
+    console.log(`[Adapter] Nhận trực tiếp Stop Hook từ Antigravity cho session: ${sessionId}`);
+
+    const activeInfo = this.activeTaskBySession.get(sessionId);
+
+    this.getTaskReport(sessionId).then((report) => {
+      if (payload.error) {
+        report.errorDetails = payload.error;
+      }
+
+      const event: TaskEvent = {
+        taskId: activeInfo?.taskId,
+        sessionId,
+        type: payload.error ? 'failed' : 'completed',
+        status: payload.error ? TaskStatus.FAILED : TaskStatus.COMPLETED,
+        report,
+        timestamp: getVietnamNowIso()
+      };
+
+      this.clearActiveTaskForSession(sessionId);
+
+      for (const sub of this.subscribers) {
+        sub(event);
+      }
+    });
+  }
+
+  private startPollingObserver(): void {
+    this.pollTimer = setInterval(async () => {
+      try {
+        const sessions = await this.getAvailableSessions();
+        for (const session of sessions) {
+          const prev = this.sessionStateCache.get(session.sessionId);
+          const currentStatus = session.status;
+          const currentNotFullyIdle = session.isNotFullyIdle;
+
+          if (prev) {
+            // Phát hiện chuyển từ RUNNING sang IDLE -> Task hoàn thành!
+            if (
+              (prev.status === SessionStatus.RUNNING || prev.notFullyIdle) &&
+              currentStatus === SessionStatus.IDLE &&
+              !currentNotFullyIdle
+            ) {
+              console.log(`[Adapter] Phát hiện task hoàn thành trên session ${session.sessionId}`);
+              const activeInfo = this.activeTaskBySession.get(session.sessionId);
+              const report = await this.getTaskReport(session.sessionId);
+
+              const event: TaskEvent = {
+                taskId: activeInfo?.taskId,
+                sessionId: session.sessionId,
+                type: 'completed',
+                status: TaskStatus.COMPLETED,
+                report,
+                timestamp: getVietnamNowIso()
+              };
+
+              this.clearActiveTaskForSession(session.sessionId);
+
+              for (const sub of this.subscribers) {
+                sub(event);
+              }
+            } else if (
+              prev.status === SessionStatus.IDLE &&
+              (currentStatus === SessionStatus.RUNNING || currentNotFullyIdle)
+            ) {
+              console.log(`[Adapter] Phát hiện task đang chạy trên session ${session.sessionId}`);
+              const activeInfo = this.activeTaskBySession.get(session.sessionId);
+              const event: TaskEvent = {
+                taskId: activeInfo?.taskId,
+                sessionId: session.sessionId,
+                type: 'status_changed',
+                status: TaskStatus.RUNNING,
+                timestamp: getVietnamNowIso()
+              };
+
+              for (const sub of this.subscribers) {
+                sub(event);
+              }
+            }
+          }
+
+          this.sessionStateCache.set(session.sessionId, {
+            status: currentStatus,
+            notFullyIdle: currentNotFullyIdle
+          });
+        }
+      } catch (err) {
+        // ignore polling loop error
+      }
+    }, config.pollIntervalMs);
+    this.pollTimer.unref();
+  }
+}
+
+export const antigravityAdapter = new AntigravityAdapter();

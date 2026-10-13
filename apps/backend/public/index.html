@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sếp AI Remote — Mobile Control</title>
+  
+  <!-- PWA Meta Tags & Shortcut Icons -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sếp AI">
+  <meta name="theme-color" content="#2563EB">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0F172A;
+      --sidebar-bg: #14171F;
+      --surface: #1E293B;
+      --surface-light: #334155;
+      --primary: #2563EB;
+      --primary-dark: #1D4ED8;
+      --accent: #06B6D4;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --error: #EF4444;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #app-container {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background-color: var(--bg);
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+
+    header {
+      background: var(--surface);
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--surface-light);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .drawer-btn {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* PWA Shortcut Banner */
+    .pwa-banner {
+      background: linear-gradient(90deg, #1E3A8A, #1D4ED8);
+      padding: 10px 16px;
+      display: none; /* Mặc định ẩn, chỉ hiện nếu chưa cài đặt */
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+    }
+    .pwa-banner .badge {
+      background: #3B82F6;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.72rem;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 16px;
+      padding-bottom: 90px;
+      overflow-y: auto;
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; animation: fadeIn 0.2s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Cards & Badges */
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .pc-status-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1.5px solid var(--surface-light);
+      transition: all 0.3s ease;
+    }
+    .pc-status-card.online { border-color: rgba(16, 185, 129, 0.5); }
+    .pc-status-card.offline { border-color: rgba(239, 68, 68, 0.5); }
+
+    .status-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .online .status-icon { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .offline .status-icon { background: rgba(239, 68, 68, 0.15); color: var(--error); }
+
+    .hero-banner {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+    }
+
+    .hero-banner h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+    .hero-banner p { font-size: 0.82rem; color: rgba(255,255,255,0.8); }
+
+    .big-mic-btn {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #fff;
+      color: var(--primary);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: transform 0.15s;
+    }
+    .big-mic-btn:active { transform: scale(0.92); }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .pill-RUNNING { background: rgba(59, 130, 246, 0.2); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .pill-COMPLETED { background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .pill-FAILED { background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .pill-QUEUED_OFFLINE { background: rgba(245, 158, 11, 0.2); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .pill-PENDING { background: rgba(245, 158, 11, 0.2); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .pill-WAITING_APPROVAL { background: rgba(168, 85, 247, 0.2); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+    .task-item { cursor: pointer; transition: background 0.2s; }
+    .task-item:active { background: var(--surface-light); }
+    .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .task-title { font-size: 0.95rem; font-weight: 600; }
+    .task-prompt { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px; }
+    .task-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Bottom Nav Bar */
+    nav.bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border-top: 1px solid var(--surface-light);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 4px 12px;
+      z-index: 20;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      flex: 1;
+    }
+    .nav-btn.active { color: var(--accent); font-weight: 600; }
+    .nav-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+    .nav-center-mic { margin-top: -20px; }
+    .nav-center-mic .mic-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.5);
+    }
+
+    /* Modal Sheet */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      padding: 24px 20px;
+      margin: 0 auto;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .input-field {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--surface-light);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.92rem;
+      margin-bottom: 12px;
+      outline: none;
+    }
+    .input-field:focus { border-color: var(--primary); }
+
+    .btn {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:active { background: var(--primary-dark); }
+
+    .mic-record-btn {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      margin: 16px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      cursor: pointer;
+      box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+      transition: all 0.2s;
+    }
+    .mic-record-btn.recording {
+      background: var(--error);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    /* Filter Chips */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 8px;
+      scrollbar-width: none;
+    }
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--surface-light);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .chip.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* ANTIGRAVITY SIDEBAR DRAWER (PROJECTS & CONVERSATIONS) */
+    .antigravity-drawer {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 320px;
+      max-width: 85vw;
+      background: var(--sidebar-bg);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      z-index: 60;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 10px 0 30px rgba(0,0,0,0.7);
+    }
+    .antigravity-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .drawer-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #fff;
+    }
+    .drawer-logo-icon {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 12px;
+    }
+
+    .new-conversation-btn {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: background 0.15s;
+    }
+    .new-conversation-btn:active { background: rgba(255,255,255,0.12); }
+
+    .drawer-static-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-bottom: 4px;
+    }
+    .drawer-static-item:hover, .drawer-static-item:active {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+
+    .drawer-section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 18px 4px 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Projects Hierarchy Tree */
+    .project-group {
+      margin-bottom: 12px;
+    }
+    .project-folder-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #93C5FD;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .project-folder-header:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .project-conversations-list {
+      margin-left: 12px;
+      padding-left: 8px;
+      border-left: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .drawer-conversation-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .drawer-conversation-item:hover, .drawer-conversation-item:active {
+      background: rgba(255,255,255,0.06);
+    }
+    .drawer-conversation-item.active {
+      background: rgba(37, 99, 235, 0.25);
+      border: 1px solid rgba(37, 99, 235, 0.4);
+      color: #60A5FA;
+      font-weight: 600;
+    }
+    .drawer-conv-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      padding-right: 8px;
+    }
+    .drawer-conv-time {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* Chat Messages */
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .bubble {
+      max-width: 82%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+    .bubble.boss {
+      align-self: flex-end;
+      background: var(--primary);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble.agent {
+      align-self: flex-start;
+      background: var(--surface);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--surface-light);
+    }
+    .bubble-role { font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; opacity: 0.8; }
+    .voice-play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: var(--accent);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+  <!-- PWA SHORTCUT BANNER -->
+  <div id="pwa-install-banner" class="pwa-banner" onclick="handlePwaInstallClick()">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>📱</span>
+      <span><b>Cài đặt ứng dụng Sếp AI Remote</b></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span class="badge">Cài đặt 📲</span>
+      <span onclick="event.stopPropagation(); dismissPwaBanner();" style="opacity: 0.8; font-size: 16px; padding: 2px 6px; cursor: pointer; color: #fff;" title="Đóng">✕</span>
+    </div>
+  </div>
+
+  <header>
+    <div class="header-left">
+      <button class="drawer-btn" onclick="toggleDrawer()">☰</button>
+      <h1><span>⚡</span> Sếp AI Remote</h1>
+    </div>
+    <div id="ws-badge" style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning); display: inline-block;"></span>
+      <span>Đang kết nối</span>
+    </div>
+  </header>
+
+  <!-- ANTIGRAVITY SIDEBAR DRAWER (PROJECTS & CONVERSATIONS) -->
+  <div id="drawer-backdrop" class="modal-overlay" onclick="toggleDrawer()"></div>
+  <aside id="antigravity-drawer" class="antigravity-drawer">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <div class="drawer-logo-icon">A</div>
+        <span>Antigravity Sessions</span>
+      </div>
+      <button onclick="toggleDrawer()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- + New Conversation -->
+      <button class="new-conversation-btn" onclick="handleNewConversationClick()">
+        <span style="font-size: 18px; color: var(--accent);">+</span>
+        <span>New Conversation</span>
+      </button>
+
+      <div class="drawer-static-item">
+        <span>🕒</span>
+        <span>Conversation History</span>
+      </div>
+      <div class="drawer-static-item">
+        <span>⏱</span>
+        <span>Automations</span>
+      </div>
+      <div class="drawer-static-item">
+        <span>🖨</span>
+        <span>Customizations</span>
+      </div>
+
+      <div class="drawer-section-title">
+        <span>Projects</span>
+        <span>📁</span>
+      </div>
+
+      <!-- DYNAMIC PROJECTS HIERARCHY TREE -->
+      <div id="drawer-projects-tree">
+        <!-- Rendered from conversation_summaries.db -->
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-pane active">
+      <div id="pc-status" class="card pc-status-card offline">
+        <div class="status-icon">💻</div>
+        <div>
+          <div id="pc-status-title" style="font-weight: 700; font-size: 1rem; color: var(--error);">Máy tính Mất kết nối</div>
+          <div id="pc-status-desc" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+            Đang tìm kiếm Windows Agent Bridge...
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Active Session Card -->
+      <div class="card" style="padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7);">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">PHIÊN LÀM VIỆC HIỆN TẠI (PROJECT):</div>
+          <div id="active-session-label" style="font-size: 0.92rem; font-weight: 600; color: #60A5FA; margin-top: 2px;">
+            Đang tải phiên...
+          </div>
+        </div>
+        <button onclick="toggleDrawer()" style="background: var(--surface-light); border: none; color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; cursor: pointer;">
+          Đổi phiên 📁
+        </button>
+      </div>
+
+      <div class="hero-banner">
+        <div>
+          <h2>Sếp muốn giao việc gì?</h2>
+          <p>Nói bằng tiếng Việt hoặc gõ yêu cầu cho Antigravity.</p>
+        </div>
+        <button class="big-mic-btn" onclick="openVoiceModal()">🎙️</button>
+      </div>
+
+      <!-- BANNER HÀNG ĐỢI / DANH SÁCH CHỜ CỦA SẾP -->
+      <div id="dashboard-queue-card" onclick="openQueueFilter()" class="card" style="cursor: pointer; padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="font-size: 1.5rem;">⏳</div>
+          <div>
+            <div style="font-weight: 700; font-size: 0.9rem; color: #F59E0B;">Danh sách chờ của Sếp</div>
+            <div id="dash-queue-count" style="font-size: 0.78rem; color: var(--text-muted);">0 task đang chờ Antigravity thực hiện</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="color: #F59E0B; font-size: 0.8rem; font-weight: 600;">Xem DS &gt;</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="font-size: 1rem;">Công việc gần đây</h3>
+        <span onclick="switchTab('tasks')" style="color: var(--accent); font-size: 0.82rem; cursor: pointer;">Xem tất cả</span>
+      </div>
+
+      <div id="recent-tasks-container">
+        <!-- Render tasks -->
+      </div>
+    </div>
+
+    <!-- TAB 2: TASKS -->
+    <div id="tab-tasks" class="tab-pane">
+      <div class="filter-bar">
+        <div class="chip active" onclick="setFilter('ALL', this)">Tất cả</div>
+        <div class="chip" onclick="setFilter('QUEUE', this)" id="chip-queue">⏳ Chờ làm <span id="queue-badge" style="display:none; background: #F59E0B; color: #000; border-radius: 10px; padding: 1px 6px; font-size: 0.7rem; font-weight: 700; margin-left: 2px;">0</span></div>
+        <div class="chip" onclick="setFilter('RUNNING', this)">⚡ Đang chạy</div>
+        <div class="chip" onclick="setFilter('COMPLETED', this)">✅ Hoàn thành</div>
+        <div class="chip" onclick="setFilter('WAITING_APPROVAL', this)">Chờ duyệt</div>
+        <div class="chip" onclick="setFilter('FAILED', this)">Thất bại</div>
+      </div>
+
+      <!-- Queue Control Bar (Hiển thị khi lọc QUEUE) -->
+      <div id="queue-control-card" style="display: none; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; color: #F59E0B;">⏳ Hàng đợi Antigravity</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="queue-count-desc">0 task đang xếp hàng đợi làm</div>
+          </div>
+          <button class="btn" onclick="executeNextInQueue()" style="width: auto; padding: 6px 12px; font-size: 0.8rem; background: #F59E0B; color: #000; font-weight: 700; border: none; border-radius: 8px; cursor: pointer;">
+            ▶️ Làm task tiếp theo
+          </button>
+        </div>
+        <div style="font-size: 0.75rem; color: #94A3B8;">
+          💡 Sếp có thể bấm "Làm task tiếp theo" ở đây, hoặc bảo: "Em vào danh sách chờ lấy task làm đi" để Antigravity tự động lấy làm.
+        </div>
+      </div>
+
+      <div id="all-tasks-container">
+        <!-- Render tasks -->
+      </div>
+    </div>
+
+    <!-- TAB 3: CHAT -->
+    <div id="tab-chat" class="tab-pane">
+      <div class="card" style="margin-bottom: 12px; padding: 10px 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label style="font-size: 0.75rem; color: var(--text-muted);">Phiên đang trò chuyện:</label>
+          <span onclick="toggleDrawer()" style="font-size: 0.75rem; color: var(--accent); cursor: pointer;">Xem tất cả dự án 📁</span>
+        </div>
+        <select id="chat-session-select" class="input-field" style="margin-bottom: 0; margin-top: 4px; padding: 8px;" onchange="onSessionSelectChange(this.value)">
+          <!-- Sessions -->
+        </select>
+      </div>
+
+      <div id="chat-messages" class="chat-messages">
+        <div class="bubble agent">
+          <div class="bubble-role">AGENT ANTIGRAVITY</div>
+          Chào Sếp! Em đang giữ nguyên lịch sử hội thoại và workspace của phiên làm việc. Sếp cần em hỗ trợ gì thêm ạ?
+          <div>
+            <button class="voice-play-btn" onclick="playVietnameseAudio('Chào Sếp! Em đang giữ nguyên lịch sử hội thoại và workspace của phiên làm việc. Sếp cần em hỗ trợ gì thêm ạ?')">
+              🔊 Nghe giọng AI
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vùng xem trước ảnh đính kèm trong Chat -->
+      <div id="chat-image-preview" style="display: flex; gap: 8px; overflow-x: auto; margin-top: 10px;"></div>
+
+      <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+        <button type="button" onclick="document.getElementById('chat-image-input').click()" style="background: var(--surface-light); border: none; border-radius: 12px; width: 44px; height: 44px; color: var(--accent); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Đính kèm ảnh">📷</button>
+        <input type="file" id="chat-image-input" accept="image/*" multiple style="display: none;" onchange="handleChatImageSelect(event)">
+        <button type="button" onclick="openVoiceModal()" style="background: var(--surface-light); border: none; border-radius: 12px; width: 44px; height: 44px; color: var(--accent); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Nói tiếng Việt">🎙️</button>
+        <input type="text" id="chat-input" class="input-field" style="margin-bottom: 0; flex: 1;" placeholder="Nhập câu hỏi hoặc yêu cầu..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button onclick="sendChatMessage()" class="btn" style="width: auto; padding: 0 18px;">Gửi</button>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETTINGS -->
+    <div id="tab-settings" class="tab-pane">
+      <div class="card">
+        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Voice AI Tiếng Việt (Tự nhiên)</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <div style="font-size: 0.95rem; font-weight: 600;">Tự động đọc khi hoàn thành task</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">Phát: "Đã xong task, Sếp vào kiểm tra đi ạ."</div>
+          </div>
+          <input type="checkbox" id="tts-auto-toggle" checked style="width: 20px; height: 20px; accent-color: var(--primary);">
+        </div>
+        <button class="btn" style="background: var(--surface-light); color: var(--accent); font-size: 0.88rem; padding: 10px;" onclick="playVietnameseAudio('Đã xong task, Sếp vào kiểm tra đi ạ.')">
+          🔊 Thử nghe giọng người Việt Nam tự nhiên
+        </button>
+      </div>
+
+      <div class="card">
+        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Shortcut Màn hình chính</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+          Thêm Sếp AI Remote vào màn hình chính của điện thoại để mở nhanh như ứng dụng native không cần thanh địa chỉ trình duyệt.
+        </p>
+        <button class="btn" style="background: #1D4ED8;" onclick="showPwaInstructions()">
+          📲 Hướng dẫn thêm Shortcut vào Màn hình chính
+        </button>
+      </div>
+
+      <div class="card">
+        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Kết nối & Thiết bị</h4>
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 0.78rem; color: var(--text-muted);">Mã ghép đôi (Pairing Code):</label>
+          <input type="text" id="setting-pairing-code" class="input-field" value="888999">
+        </div>
+        <button class="btn" onclick="saveSettings()">Lưu & Ghép đôi lại</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      Tổng quan
+    </button>
+    <button class="nav-btn" onclick="switchTab('tasks')">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      Công việc
+    </button>
+    <div class="nav-btn nav-center-mic" onclick="openVoiceModal()">
+      <div class="mic-circle">🎙️</div>
+    </div>
+    <button class="nav-btn" onclick="switchTab('chat')">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+      Hội thoại
+    </button>
+    <button class="nav-btn" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13-.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      Cài đặt
+    </button>
+  </nav>
+
+  <!-- MODAL GIAO VIỆC BẰNG GIỌNG NÓI -->
+  <div id="voice-modal" class="modal-overlay" onclick="if(event.target===this) closeVoiceModal()">
+    <div class="modal-sheet">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="font-size: 1.05rem;">Giao việc bằng giọng nói</h3>
+        <button onclick="closeVoiceModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <label style="font-size: 0.75rem; color: var(--text-muted);">Phiên làm việc (Session Antigravity):</label>
+        <select id="modal-session-select" class="input-field" style="margin-top: 4px; padding: 8px;">
+          <!-- Sessions -->
+        </select>
+      </div>
+
+      <textarea id="modal-prompt-input" class="input-field" rows="3" placeholder="Ví dụ: 'Em xem ảnh giao diện này rồi làm theo đúng mẫu giúp anh.'"></textarea>
+
+      <!-- ĐÍNH KÈM ẢNH TỪ ĐIỆN THOẠI -->
+      <div style="margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">📷 Ảnh đính kèm (Ảnh chụp màn hình, lỗi, thiết kế):</label>
+          <button type="button" onclick="document.getElementById('modal-image-input').click()" style="background: rgba(37,99,235,0.2); border: 1px solid rgba(37,99,235,0.4); color: var(--accent); border-radius: 8px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <span>➕ Thêm ảnh</span>
+          </button>
+          <input type="file" id="modal-image-input" accept="image/*" multiple style="display: none;" onchange="handleModalImageSelect(event)">
+        </div>
+        <div id="modal-image-preview" style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; min-height: 10px;"></div>
+      </div>
+
+      <div style="text-align: center;">
+        <button id="modal-record-btn" class="mic-record-btn" onclick="toggleSttRecording()">🎙️</button>
+        <div id="stt-status-text" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">
+          Bấm micro để nói tiếng Việt
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="btn" onclick="submitVoiceTask(false)" style="flex: 1; background: var(--primary);">⚡ Giao làm ngay</button>
+        <button class="btn" onclick="submitVoiceTask(true)" style="flex: 1; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.5); color: #F59E0B;">📥 Thêm vào DS chờ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SHORTCUT GUIDANCE -->
+  <div id="shortcut-modal" class="modal-overlay" onclick="if(event.target===this) closeShortcutModal()">
+    <div class="modal-sheet">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="font-size: 1.1rem;">📲 Tạo Shortcut trên điện thoại</h3>
+        <button onclick="closeShortcutModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="font-size: 0.9rem; line-height: 1.5; color: var(--text); margin-bottom: 16px;">
+        <p><b>Trên iPhone (Safari):</b></p>
+        <p style="color: var(--text-muted); margin: 4px 0 12px 14px;">
+          1. Bấm nút <b>Chia sẻ (Share) ⎋</b> ở thanh công cụ dưới cùng Safari.<br>
+          2. Cuộn xuống và chọn <b>"Thêm vào MH chính" (Add to Home Screen) ➕</b>.<br>
+          3. Bấm <b>Thêm (Add)</b>.
+        </p>
+
+        <p><b>Trên Android (Chrome):</b></p>
+        <p style="color: var(--text-muted); margin: 4px 0 12px 14px;">
+          1. Bấm nút <b>Menu 3 chấm ⋮</b> ở góc trên bên phải Chrome.<br>
+          2. Chọn <b>"Cài đặt ứng dụng"</b> hoặc <b>"Thêm vào màn hình chính" 📱</b>.<br>
+          3. Bấm <b>Cài đặt (Install)</b>.
+        </p>
+      </div>
+
+      <button class="btn" onclick="closeShortcutModal()">Đã hiểu</button>
+    </div>
+  </div>
+
+  <!-- MODAL CHI TIẾT TASK -->
+  <div id="detail-modal" class="modal-overlay" onclick="if(event.target===this) closeDetailModal()">
+    <div class="modal-sheet" style="max-height: 80vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 id="detail-title" style="font-size: 1.1rem;">Chi tiết công việc</h3>
+        <button onclick="closeDetailModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Tự động thêm header bỏ qua màn hình chờ của ngrok nếu dùng domain tĩnh
+  const _origFetch = window.fetch;
+  window.fetch = function(url, options = {}) {
+    options = options || {};
+    options.headers = options.headers || {};
+    if (options.headers instanceof Headers) {
+      options.headers.set('ngrok-skip-browser-warning', 'true');
+    } else if (Array.isArray(options.headers)) {
+      options.headers.push(['ngrok-skip-browser-warning', 'true']);
+    } else {
+      options.headers['ngrok-skip-browser-warning'] = 'true';
+    }
+    return _origFetch(url, options);
+  };
+
+  let state = {
+    token: null,
+    isPcOnline: false,
+    tasks: [],
+    sessions: [],
+    projectGroups: [],
+    activeSessionId: null,
+    currentFilter: 'ALL',
+    isRecording: false,
+    recognition: null,
+    deferredInstallPrompt: null,
+    modalAttachments: [],
+    chatAttachments: []
+  };
+
+  // --- XỬ LÝ ĐÍNH KÈM ẢNH TỪ ĐIỆN THOẠI ---
+  function handleModalImageSelect(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    for (const file of Array.from(files)) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        state.modalAttachments.push({
+          name: file.name,
+          mimeType: file.type || 'image/png',
+          data: e.target.result
+        });
+        renderModalImagePreviews();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function renderModalImagePreviews() {
+    const cont = document.getElementById('modal-image-preview');
+    if (!cont) return;
+    cont.innerHTML = state.modalAttachments.map((att, idx) => `
+      <div style="position: relative; display: inline-block; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--surface-light); flex-shrink: 0;">
+        <img src="${att.data}" style="width: 100%; height: 100%; object-fit: cover;">
+        <button type="button" onclick="removeModalAttachment(${idx})" style="position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.7); color: #fff; border: none; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function removeModalAttachment(idx) {
+    state.modalAttachments.splice(idx, 1);
+    renderModalImagePreviews();
+  }
+
+  function handleChatImageSelect(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    for (const file of Array.from(files)) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        state.chatAttachments.push({
+          name: file.name,
+          mimeType: file.type || 'image/png',
+          data: e.target.result
+        });
+        renderChatImagePreviews();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function renderChatImagePreviews() {
+    const cont = document.getElementById('chat-image-preview');
+    if (!cont) return;
+    cont.innerHTML = state.chatAttachments.map((att, idx) => `
+      <div style="position: relative; display: inline-block; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--surface-light); flex-shrink: 0;">
+        <img src="${att.data}" style="width: 100%; height: 100%; object-fit: cover;">
+        <button type="button" onclick="removeChatAttachment(${idx})" style="position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.7); color: #fff; border: none; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function removeChatAttachment(idx) {
+    state.chatAttachments.splice(idx, 1);
+    renderChatImagePreviews();
+  }
+
+  // 1. Kiểm tra toàn diện xem app đã được cài đặt hoặc đang chạy ở chế độ App độc lập chưa
+  function checkIsAppInstalled() {
+    // A. Kiểm tra display-mode standalone hoặc fullscreen
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches;
+
+    // B. Kiểm tra iOS Safari standalone mode
+    const isIosStandalone = window.navigator && window.navigator.standalone === true;
+
+    // C. Kiểm tra Android WebAPK launch referrer
+    const isAndroidApp = document.referrer && document.referrer.startsWith('android-app://');
+
+    // D. Kiểm tra trạng thái đã cài đặt lưu trong localStorage
+    const isSavedInstalled = localStorage.getItem('sep_ai_pwa_installed') === 'true';
+
+    // E. Kiểm tra người dùng đã chủ động bấm đóng thanh cài đặt
+    const isDismissed = localStorage.getItem('sep_ai_pwa_banner_dismissed') === 'true';
+
+    return isStandalone || isIosStandalone || isAndroidApp || isSavedInstalled || isDismissed;
+  }
+
+  function updatePwaBannerVisibility() {
+    const banner = document.getElementById('pwa-install-banner');
+    if (!banner) return;
+    if (checkIsAppInstalled()) {
+      banner.style.display = 'none';
+    }
+  }
+
+  function dismissPwaBanner() {
+    localStorage.setItem('sep_ai_pwa_banner_dismissed', 'true');
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.style.display = 'none';
+  }
+
+  // Chạy ngay khi nạp script
+  updatePwaBannerVisibility();
+
+  // 2. Đăng ký Service Worker với scope chuẩn
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+      .catch(err => console.warn('[PWA] SW register warning:', err));
+  }
+
+  // 3. Bắt sự kiện PWA Install trên Android Chrome (WebAPK)
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    state.deferredInstallPrompt = e;
+    const banner = document.getElementById('pwa-install-banner');
+    // Chỉ hiển thị banner nếu app CHƯA được cài đặt
+    if (banner && !checkIsAppInstalled()) {
+      banner.style.display = 'flex';
+      const bTitle = banner.querySelector('b');
+      if (bTitle) bTitle.innerText = 'Cài đặt ứng dụng Sếp AI Remote';
+      const badge = banner.querySelector('.badge');
+      if (badge) badge.innerText = 'Cài đặt ngay 📲';
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    console.log('[PWA] Đã phát hiện sự kiện appinstalled - Đã cài đặt thành công!');
+    localStorage.setItem('sep_ai_pwa_installed', 'true');
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.style.display = 'none';
+  });
+
+  function handlePwaInstallClick() {
+    if (state.deferredInstallPrompt) {
+      state.deferredInstallPrompt.prompt();
+      state.deferredInstallPrompt.userChoice.then((choice) => {
+        if (choice && choice.outcome === 'accepted') {
+          localStorage.setItem('sep_ai_pwa_installed', 'true');
+          const banner = document.getElementById('pwa-install-banner');
+          if (banner) banner.style.display = 'none';
+        }
+        state.deferredInstallPrompt = null;
+      });
+    } else {
+      showPwaInstructions();
+    }
+  }
+
+  function showPwaInstructions() {
+    document.getElementById('shortcut-modal').classList.add('open');
+  }
+  function closeShortcutModal() {
+    document.getElementById('shortcut-modal').classList.remove('open');
+  }
+
+  function toggleDrawer() {
+    const drawer = document.getElementById('antigravity-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    drawer.classList.toggle('open');
+    backdrop.classList.toggle('open');
+  }
+
+  // Định dạng thời gian chuẩn Việt Nam (UTC+7 / GMT+7)
+  function formatVietnamTime(isoOrDateStr) {
+    if (!isoOrDateStr) return '';
+    const d = new Date(isoOrDateStr);
+    if (isNaN(d.getTime())) return isoOrDateStr;
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    const parts = formatter.formatToParts(d);
+    const getPart = (type) => parts.find(p => p.type === type)?.value || '';
+    return `${getPart('hour')}:${getPart('minute')}:${getPart('second')} ${getPart('day')}/${getPart('month')}/${getPart('year')}`;
+  }
+
+  // Mở khóa âm thanh di động khi người dùng chạm màn hình lần đầu
+  let audioUnlocked = false;
+  function unlockAudioContext() {
+    if (audioUnlocked) return;
+    try {
+      const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+      silent.play().then(() => {
+        audioUnlocked = true;
+      }).catch(() => {});
+    } catch (_) {}
+  }
+  document.addEventListener('click', unlockAudioContext, { passive: true });
+  document.addEventListener('touchstart', unlockAudioContext, { passive: true });
+
+  // 1. Voice AI Tiếng Việt: Phát âm thanh người thật qua /api/tts
+  function playVietnameseAudio(text) {
+    if (!text || !text.trim()) return;
+
+    // Ưu tiên phát âm thanh MP3 chất lượng cao tiếng Việt từ server
+    const audioUrl = `/api/tts?text=${encodeURIComponent(text.trim())}`;
+    const audio = new Audio(audioUrl);
+    audio.play().catch(err => {
+      console.warn('[Audio] Trình duyệt chặn autoplay audio, fallback sang Web Speech API:', err);
+      // Fallback: Web Speech API nếu offline hoặc autoplay bị hạn chế
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'vi-VN';
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+      }
+    });
+  }
+
+  function showVoiceToast(title, voiceText, isError = false) {
+    const existing = document.getElementById('voice-toast-banner');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'voice-toast-banner';
+    const borderColor = isError ? 'rgba(239, 68, 68, 0.5)' : 'rgba(6, 182, 212, 0.4)';
+    const shadowColor = isError ? 'rgba(239, 68, 68, 0.3)' : 'rgba(6, 182, 212, 0.3)';
+    const badgeColor = isError ? '#f87171' : '#38bdf8';
+    const badgeText = isError ? '⚠️ TASK THẤT BẠI / GẶP LỖI' : '🎉 ĐÃ XONG TASK MỚI';
+    const btnBg = isError ? '#ef4444' : 'var(--primary)';
+    const btnColor = isError ? '#ffffff' : '#000000';
+
+    toast.style.cssText = `
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 99999;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border: 1px solid ${borderColor};
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px ${shadowColor};
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      animation: slideDown 0.3s ease;
+    `;
+    toast.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; color: ${badgeColor}; font-size: 0.9rem;">${badgeText}</span>
+        <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
+      </div>
+      <div style="font-size: 0.85rem; color: #f1f5f9; line-height: 1.4;">${voiceText}</div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+        <button id="toast-listen-btn" style="background: ${btnBg}; color: ${btnColor}; border: none; border-radius: 8px; padding: 6px 12px; font-weight: 600; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+          🔊 Nghe lại thông báo
+        </button>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    document.getElementById('toast-listen-btn').onclick = () => {
+      playVietnameseAudio(voiceText);
+    };
+
+    setTimeout(() => {
+      if (toast.parentElement) toast.remove();
+    }, 15000);
+  }
+
+  // 2. Voice STT: Ghi âm giọng nói tiếng Việt
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    state.recognition = new SpeechRecognition();
+    state.recognition.lang = 'vi-VN';
+    state.recognition.continuous = false;
+    state.recognition.interimResults = true;
+
+    state.recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        transcript += event.results[i][0].transcript;
+      }
+      document.getElementById('modal-prompt-input').value = transcript;
+    };
+
+    state.recognition.onend = () => {
+      state.isRecording = false;
+      document.getElementById('modal-record-btn').classList.remove('recording');
+      document.getElementById('stt-status-text').innerText = 'Đã nhận dạng xong. Sếp có thể sửa hoặc bấm gửi.';
+    };
+
+    state.recognition.onerror = (e) => {
+      state.isRecording = false;
+      document.getElementById('modal-record-btn').classList.remove('recording');
+      document.getElementById('stt-status-text').innerText = 'Lỗi micro: ' + e.error;
+    };
+  }
+
+  function toggleSttRecording() {
+    if (!state.recognition) {
+      alert('Trình duyệt chưa hỗ trợ Web Speech API. Sếp vui lòng nhập văn bản trực tiếp.');
+      return;
+    }
+
+    if (state.isRecording) {
+      state.recognition.stop();
+      state.isRecording = false;
+      document.getElementById('modal-record-btn').classList.remove('recording');
+    } else {
+      try {
+        state.recognition.start();
+        state.isRecording = true;
+        document.getElementById('modal-record-btn').classList.add('recording');
+        document.getElementById('stt-status-text').innerText = 'Đang lắng nghe Sếp nói tiếng Việt...';
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }
+
+  // 3. Tab management
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+
+    const btn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.innerText.toLowerCase().includes(
+      tabId === 'dashboard' ? 'tổng quan' : tabId === 'tasks' ? 'công việc' : tabId === 'chat' ? 'hội thoại' : 'cài đặt'
+    ));
+    if (btn) btn.classList.add('active');
+  }
+
+  function openVoiceModal() {
+    document.getElementById('voice-modal').classList.add('open');
+  }
+  function closeVoiceModal() {
+    if (state.isRecording && state.recognition) {
+      state.recognition.stop();
+    }
+    document.getElementById('voice-modal').classList.remove('open');
+  }
+
+  function closeDetailModal() {
+    document.getElementById('detail-modal').classList.remove('open');
+  }
+
+  // 4. API & WebSocket
+  async function initAuth() {
+    const code = document.getElementById('setting-pairing-code').value || '888999';
+    try {
+      const res = await fetch('/api/auth/pair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pairingCode: code,
+          deviceName: 'Sếp AI Mobile Web',
+          deviceType: 'mobile'
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        state.token = data.token;
+        connectWebSocket();
+        fetchStatus();
+        fetchSessions();
+        fetchTasks();
+      }
+    } catch (err) {
+      console.error('Lỗi auth:', err);
+    }
+  }
+
+  function connectWebSocket() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+    ws.onopen = () => {
+      document.getElementById('ws-badge').innerHTML = '<span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block;"></span><span>Đã kết nối</span>';
+      ws.send(JSON.stringify({
+        event: 'authenticate',
+        payload: { token: state.token },
+        timestamp: new Date().toISOString()
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        handleWsEvent(msg);
+      } catch (e) {}
+    };
+
+    ws.onclose = () => {
+      document.getElementById('ws-badge').innerHTML = '<span style="width: 8px; height: 8px; border-radius: 50%; background: var(--error); display: inline-block;"></span><span>Mất kết nối</span>';
+      setTimeout(connectWebSocket, 3000);
+    };
+  }
+
+  function handleWsEvent(msg) {
+    if (msg.event === 'bridge_status') {
+      state.isPcOnline = msg.payload.isOnline;
+      updatePcStatusUI(msg.payload);
+    } else if (msg.event === 'sessions_updated') {
+      state.sessions = msg.payload.sessions || [];
+      state.projectGroups = msg.payload.projectGroups || [];
+      renderSessionsAndProjects();
+    } else if (msg.event === 'task_updated') {
+      fetchTasks();
+    } else if (msg.event === 'task_completed') {
+      fetchTasks();
+      const taskTitle = msg.payload.title || '';
+      const fallbackVoice = `Sếp Nam ơi, em đã làm xong task '${taskTitle}' mà sếp giao rồi. Sếp còn việc gì cần em làm nữa không ạ. Sếp vào kiểm tra task kia nhé.`;
+      const ttsText = msg.payload.ttsVoiceText || fallbackVoice;
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(ttsText);
+      }
+      showVoiceToast(taskTitle, ttsText);
+    }
+  }
+
+  function updatePcStatusUI(status) {
+    const card = document.getElementById('pc-status');
+    const title = document.getElementById('pc-status-title');
+    const desc = document.getElementById('pc-status-desc');
+
+    if (status.isOnline) {
+      card.className = 'card pc-status-card online';
+      title.innerText = 'Máy tính Online';
+      title.style.color = 'var(--success)';
+      desc.innerText = `Thiết bị: ${status.hostname || 'PC'} (Antigravity Sẵn sàng)`;
+    } else {
+      card.className = 'card pc-status-card offline';
+      title.innerText = 'Máy tính Mất kết nối';
+      title.style.color = 'var(--error)';
+      desc.innerText = 'Máy tính offline. Task mới sẽ vào hàng đợi.';
+    }
+  }
+
+  async function fetchStatus() {
+    const res = await fetch('/api/pc/status', { headers: { 'Authorization': `Bearer ${state.token}` } });
+    const data = await res.json();
+    if (data.status) {
+      state.isPcOnline = data.status.isOnline;
+      updatePcStatusUI(data.status);
+    }
+  }
+
+  async function fetchSessions() {
+    const res = await fetch('/api/pc/sessions', { headers: { 'Authorization': `Bearer ${state.token}` } });
+    const data = await res.json();
+    if (data.sessions) {
+      state.sessions = data.sessions;
+      state.projectGroups = data.projectGroups || [];
+      if (!state.activeSessionId && state.sessions.length > 0) {
+        state.activeSessionId = state.sessions[0].sessionId;
+      }
+      renderSessionsAndProjects();
+    }
+  }
+
+  // 5. HIỂN THỊ CÂY DỰ ÁN & CONVERSATION GIỐNG ANTIGRAVITY (REQUEST 3)
+  function renderSessionsAndProjects() {
+    const treeCont = document.getElementById('drawer-projects-tree');
+    const modalSel = document.getElementById('modal-session-select');
+    const chatSel = document.getElementById('chat-session-select');
+
+    modalSel.innerHTML = '';
+    chatSel.innerHTML = '';
+
+    // Cập nhật thẻ nhãn session hiện tại
+    const currentSession = state.sessions.find(s => s.sessionId === state.activeSessionId);
+    if (currentSession) {
+      document.getElementById('active-session-label').innerText = `${currentSession.projectName} / ${currentSession.title}`;
+    }
+
+    state.sessions.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.sessionId;
+      opt.innerText = `[${s.projectName}] ${s.title}`;
+      if (s.sessionId === state.activeSessionId) opt.selected = true;
+      modalSel.appendChild(opt.cloneNode(true));
+      chatSel.appendChild(opt);
+    });
+
+    // Gom nhóm conversations theo projectName nếu chưa có projectGroups
+    let groups = state.projectGroups;
+    if (!groups || groups.length === 0) {
+      const map = new Map();
+      state.sessions.forEach(s => {
+        const pName = s.projectName || 'Dự án khác';
+        if (!map.has(pName)) map.set(pName, { projectName: pName, sessions: [] });
+        map.get(pName).sessions.push(s);
+      });
+      groups = Array.from(map.values());
+    }
+
+    // Render Tree giống hệt sidebar Antigravity
+    let treeHtml = '';
+    groups.forEach(g => {
+      treeHtml += `
+        <div class="project-group">
+          <div class="project-folder-header">
+            <span>📁</span>
+            <span>${g.projectName}</span>
+          </div>
+          <div class="project-conversations-list">
+            ${g.sessions.map(s => `
+              <div class="drawer-conversation-item ${s.sessionId === state.activeSessionId ? 'active' : ''}" onclick="selectActiveSession('${s.sessionId}')">
+                <span class="drawer-conv-title">${s.title}</span>
+                <span class="drawer-conv-time">${s.timeAgo || ''}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    });
+
+    treeCont.innerHTML = treeHtml || '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 10px;">Chưa tìm thấy project nào.</div>';
+  }
+
+  function selectActiveSession(sessionId) {
+    state.activeSessionId = sessionId;
+    renderSessionsAndProjects();
+    toggleDrawer();
+    switchTab('chat');
+  }
+
+  function onSessionSelectChange(sessionId) {
+    state.activeSessionId = sessionId;
+    renderSessionsAndProjects();
+  }
+
+  function handleNewConversationClick() {
+    toggleDrawer();
+    openVoiceModal();
+    document.getElementById('modal-prompt-input').placeholder = 'Nhập yêu cầu để khởi tạo phiên hội thoại mới...';
+  }
+
+  async function fetchTasks() {
+    const res = await fetch('/api/tasks', { headers: { 'Authorization': `Bearer ${state.token}` } });
+    const data = await res.json();
+    if (data.tasks) {
+      state.tasks = data.tasks;
+      renderTasks();
+    }
+  }
+
+  function openQueueFilter() {
+    switchTab('tasks');
+    const chip = document.getElementById('chip-queue');
+    if (chip) setFilter('QUEUE', chip);
+  }
+
+  function setFilter(filter, el) {
+    state.currentFilter = filter;
+    document.querySelectorAll('.filter-bar .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderTasks();
+  }
+
+  function renderTasks() {
+    const recentCont = document.getElementById('recent-tasks-container');
+    const allCont = document.getElementById('all-tasks-container');
+    const queueCard = document.getElementById('queue-control-card');
+
+    const queueTasks = state.tasks.filter(t => t.status === 'PENDING' || t.status === 'QUEUED_OFFLINE');
+    const queueCount = queueTasks.length;
+
+    // Cập nhật badges và số lượng task đang chờ
+    const qBadge = document.getElementById('queue-badge');
+    if (qBadge) {
+      qBadge.innerText = queueCount;
+      qBadge.style.display = queueCount > 0 ? 'inline-block' : 'none';
+    }
+    const dashQCount = document.getElementById('dash-queue-count');
+    if (dashQCount) {
+      dashQCount.innerText = `${queueCount} task đang chờ Antigravity thực hiện`;
+    }
+    const qCountDesc = document.getElementById('queue-count-desc');
+    if (qCountDesc) {
+      qCountDesc.innerText = `${queueCount} task đang xếp hàng đợi làm`;
+    }
+
+    if (queueCard) {
+      queueCard.style.display = state.currentFilter === 'QUEUE' ? 'block' : 'none';
+    }
+
+    let filtered = [];
+    if (state.currentFilter === 'ALL') {
+      filtered = state.tasks;
+    } else if (state.currentFilter === 'QUEUE') {
+      filtered = queueTasks;
+    } else {
+      filtered = state.tasks.filter(t => t.status === state.currentFilter);
+    }
+
+    const makeTaskHtml = (t) => {
+      const isWaiting = t.status === 'PENDING' || t.status === 'QUEUED_OFFLINE';
+      const statusLabel = t.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (t.status === 'QUEUED_OFFLINE' ? '⏳ HÀNG ĐỢI OFFLINE' : t.status);
+      return `
+        <div class="card task-item" onclick="openDetailModal('${t.id}')">
+          <div class="task-header">
+            <div class="task-title">${t.title}</div>
+            <span class="pill pill-${t.status}">${statusLabel}</span>
+          </div>
+          <div class="task-prompt">${t.prompt}</div>
+          <div class="task-meta">
+            <span>🕒 ${formatVietnamTime(t.createdAt)}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              ${t.attachments && t.attachments.length > 0 ? `<span style="color: var(--accent); font-weight: 600;">📷 ${t.attachments.length} ảnh</span>` : ''}
+              <span style="color: var(--accent);">Xem chi tiết &gt;</span>
+            </div>
+          </div>
+          ${isWaiting ? `
+            <div style="display: flex; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--surface-light);" onclick="event.stopPropagation()">
+              <button onclick="executeTaskById('${t.id}')" style="flex: 1; background: #2563EB; color: white; border: none; padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                ▶️ Bắt đầu làm ngay
+              </button>
+              <button onclick="deleteTaskById('${t.id}')" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
+                🗑️ Xóa
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    };
+
+    if (recentCont) {
+      recentCont.innerHTML = state.tasks.slice(0, 4).map(makeTaskHtml).join('') || '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Chưa có task nào.</div>';
+    }
+    if (allCont) {
+      allCont.innerHTML = filtered.map(makeTaskHtml).join('') || `<div style="color: var(--text-muted); text-align: center; padding: 20px;">${state.currentFilter === 'QUEUE' ? 'Danh sách chờ đang trống. Sếp có thể thêm task vào hàng đợi để làm sau!' : 'Không có task trong mục này.'}</div>`;
+    }
+  }
+
+  function openDetailModal(taskId) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    document.getElementById('detail-title').innerText = task.title;
+    const cont = document.getElementById('detail-content');
+
+    let reportHtml = '<div style="color: var(--text-muted); font-style: italic;">Đang chờ báo cáo từ Antigravity...</div>';
+    if (task.report) {
+      reportHtml = `
+        <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-weight: 600; color: var(--text);">🗣️ ${task.report.voiceNotificationText}</div>
+          <button onclick="playVietnameseAudio('${task.report.voiceNotificationText}')" style="background: none; border: none; font-size: 20px; cursor: pointer;">🔊</button>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">TÓM TẮT:</div>
+          <div style="font-size: 0.9rem; margin-top: 2px;">${task.report.summary}</div>
+        </div>
+        ${task.report.filesModified && task.report.filesModified.length ? `
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">FILES ĐÃ SỬA:</div>
+            <div style="font-family: monospace; font-size: 0.8rem; color: #93C5FD; margin-top: 4px;">
+              ${task.report.filesModified.map(f => `<div>📄 ${f}</div>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+        ${task.report.testResults ? `
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">KẾT QUẢ KIỂM THỬ:</div>
+            <pre style="background: var(--bg); padding: 8px; border-radius: 8px; color: var(--success); font-size: 0.75rem; margin-top: 4px;">${task.report.testResults}</pre>
+          </div>
+        ` : ''}
+      `;
+    }
+
+    let attachHtml = '';
+    if (task.attachments && task.attachments.length > 0) {
+      attachHtml = `
+        <div style="margin-top: 10px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ẢNH ĐÍNH KÈM TỪ SẾP (${task.attachments.length}):</div>
+          <div style="display: flex; gap: 8px; overflow-x: auto; padding: 6px 0;">
+            ${task.attachments.map(att => `
+              <a href="${att.url || '#'}" target="_blank" style="display: block;">
+                <img src="${att.url}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--surface-light);" title="${att.name}">
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    const isWaiting = task.status === 'PENDING' || task.status === 'QUEUED_OFFLINE';
+
+    cont.innerHTML = `
+      <div style="margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="pill pill-${task.status}">${task.status === 'PENDING' ? '⏳ ĐANG CHỜ' : task.status}</span>
+          <span style="font-size: 0.75rem; color: var(--accent); font-weight: 600;">🇻🇳 Giờ VN (GMT+7)</span>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px;">
+          <span>🕒 Tạo: <strong style="color: var(--text);">${formatVietnamTime(task.createdAt)}</strong></span>
+          ${task.completedAt ? `<span>• 🏁 Xong: <strong style="color: var(--success);">${formatVietnamTime(task.completedAt)}</strong></span>` : ''}
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">Yêu cầu:</div>
+        <div style="font-size: 0.95rem; line-height: 1.4;">${task.prompt}</div>
+        ${attachHtml}
+        ${isWaiting ? `
+          <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="btn" onclick="closeDetailModal(); executeTaskById('${task.id}')" style="flex: 1; background: var(--primary); padding: 10px; font-size: 0.9rem;">
+              ▶️ Bắt đầu làm ngay
+            </button>
+            <button class="btn" onclick="closeDetailModal(); deleteTaskById('${task.id}')" style="flex: 1; background: rgba(239,68,68,0.2); color: #EF4444; border: 1px solid rgba(239,68,68,0.4); padding: 10px; font-size: 0.9rem;">
+              🗑️ Xóa khỏi DS chờ
+            </button>
+          </div>
+        ` : ''}
+      </div>
+      <hr style="border: none; border-top: 1px solid var(--surface-light); margin: 14px 0;">
+      ${reportHtml}
+    `;
+
+    document.getElementById('detail-modal').classList.add('open');
+  }
+
+  async function executeNextInQueue() {
+    try {
+      const res = await fetch('/api/tasks/queue/next', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showVoiceToast('Hàng đợi', data.message || 'Không thể chạy task', true);
+        playVietnameseAudio(data.message || 'Danh sách chờ đang trống Sếp ạ.');
+        return;
+      }
+      const voiceMsg = `Dạ em đã lấy task "${data.task.title}" từ danh sách chờ và đang bắt đầu thực hiện cho Sếp rồi ạ.`;
+      showVoiceToast('Đang thực hiện', voiceMsg, false);
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(voiceMsg);
+      }
+      fetchTasks();
+    } catch (e) {
+      showVoiceToast('Lỗi', e.message, true);
+    }
+  }
+
+  async function executeTaskById(taskId) {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/execute`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showVoiceToast('Lỗi', data.message || 'Không thể chạy task', true);
+        return;
+      }
+      const voiceMsg = `Dạ em bắt đầu làm task "${data.task.title}" cho Sếp rồi ạ.`;
+      showVoiceToast('Đang thực hiện', voiceMsg, false);
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(voiceMsg);
+      }
+      fetchTasks();
+    } catch (e) {
+      showVoiceToast('Lỗi', e.message, true);
+    }
+  }
+
+  async function deleteTaskById(taskId) {
+    if (!confirm('Sếp có chắc chắn muốn xóa task này khỏi danh sách chờ không ạ?')) return;
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showVoiceToast('Đã xóa', 'Đã xóa task khỏi danh sách chờ', false);
+        fetchTasks();
+      }
+    } catch (e) {
+      showVoiceToast('Lỗi', e.message, true);
+    }
+  }
+
+  async function submitVoiceTask(isQueued = false) {
+    const prompt = document.getElementById('modal-prompt-input').value.trim();
+    const sessionId = document.getElementById('modal-session-select').value;
+    if (!prompt && state.modalAttachments.length === 0) {
+      showVoiceToast('Thiếu nội dung', 'Sếp chưa nhập hoặc nói nội dung yêu cầu ạ!', true);
+      playVietnameseAudio('Sếp ơi, Sếp chưa nhập nội dung yêu cầu ạ.');
+      return;
+    }
+
+    const attachmentsToSend = [...state.modalAttachments];
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({
+          prompt: prompt || 'Giao việc kèm ảnh từ Sếp',
+          sessionId: sessionId || state.activeSessionId,
+          attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
+          isQueued: Boolean(isQueued),
+          idempotencyKey: 'key_' + Date.now()
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const errorMsg = data.error || `Lỗi máy chủ (${res.status})`;
+        const voiceFail = `Sếp Nam ơi, gửi task thất bại rồi ạ: ${errorMsg}`;
+        showVoiceToast('Gửi task thất bại', voiceFail, true);
+        if (document.getElementById('tts-auto-toggle').checked) {
+          playVietnameseAudio(voiceFail);
+        }
+        return;
+      }
+
+      // Giao việc thành công
+      closeVoiceModal();
+      document.getElementById('modal-prompt-input').value = '';
+      state.modalAttachments = [];
+      renderModalImagePreviews();
+      fetchTasks();
+
+      if (isQueued || (data.task && data.task.status === 'PENDING')) {
+        const voiceQueued = 'Dạ em đã thêm task vào danh sách chờ cho Sếp rồi ạ. Khi nào cần, Sếp chỉ cần bảo là Antigravity sẽ tự động lấy làm ạ!';
+        showVoiceToast('Đã thêm vào DS chờ', voiceQueued, false);
+        if (document.getElementById('tts-auto-toggle').checked) {
+          playVietnameseAudio(voiceQueued);
+        }
+      } else if (data.task && data.task.status === 'QUEUED_OFFLINE') {
+        const voiceQueuedOffline = 'Sếp Nam ơi, máy tính đang offline. Task đã được lưu vào hàng đợi và sẽ tự động chạy khi máy tính kết nối lại ạ.';
+        showVoiceToast('Đã lưu hàng đợi', voiceQueuedOffline, false);
+        if (document.getElementById('tts-auto-toggle').checked) {
+          playVietnameseAudio(voiceQueuedOffline);
+        }
+      } else {
+        const voiceSuccess = 'Dạ Sếp Nam, em đã nhận task và bắt đầu làm trên máy tính rồi ạ!';
+        showVoiceToast('Đã tiếp nhận task', voiceSuccess, false);
+        if (document.getElementById('tts-auto-toggle').checked) {
+          playVietnameseAudio(voiceSuccess);
+        }
+      }
+    } catch (err) {
+      const voiceFail = `Sếp Nam ơi, gửi task thất bại do mất kết nối: ${err.message}`;
+      showVoiceToast('Lỗi gửi task', voiceFail, true);
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(voiceFail);
+      }
+    }
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    const attachmentsToSend = [...state.chatAttachments];
+    if (!text && attachmentsToSend.length === 0) return;
+
+    let imgPreviewHtml = '';
+    if (attachmentsToSend.length > 0) {
+      imgPreviewHtml = `<div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">${attachmentsToSend.map(a => `<img src="${a.data}" style="max-width: 140px; max-height: 140px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">`).join('')}</div>`;
+    }
+
+    const chatCont = document.getElementById('chat-messages');
+    chatCont.innerHTML += `
+      <div class="bubble boss">
+        <div class="bubble-role">SẾP</div>
+        ${text || '<i>(Đã gửi ảnh)</i>'}
+        ${imgPreviewHtml}
+      </div>
+    `;
+    input.value = '';
+    state.chatAttachments = [];
+    renderChatImagePreviews();
+    chatCont.scrollTop = chatCont.scrollHeight;
+
+    const sessionId = document.getElementById('chat-session-select').value || state.activeSessionId;
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({
+          prompt: text || 'Gửi kèm ảnh từ Sếp',
+          sessionId,
+          attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
+          idempotencyKey: 'msg_' + Date.now()
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const errorMsg = data.error || `HTTP ${res.status}`;
+        chatCont.innerHTML += `
+          <div class="bubble agent" style="border-left: 3px solid #ef4444; background: rgba(239, 68, 68, 0.1);">
+            <div class="bubble-role" style="color: #ef4444;">LỖI GỬI LỆNH</div>
+            Sếp Nam ơi, gửi lệnh thất bại: ${errorMsg}. Sếp kiểm tra lại kết nối nhé!
+          </div>
+        `;
+        const voiceFail = `Sếp Nam ơi, gửi lệnh thất bại rồi ạ: ${errorMsg}`;
+        if (document.getElementById('tts-auto-toggle').checked) {
+          playVietnameseAudio(voiceFail);
+        }
+        showVoiceToast('Lỗi gửi lệnh', voiceFail, true);
+      } else {
+        const isOffline = data.task && data.task.status === 'QUEUED_OFFLINE';
+        chatCont.innerHTML += `
+          <div class="bubble agent">
+            <div class="bubble-role">AGENT ANTIGRAVITY</div>
+            ${isOffline 
+              ? 'Dạ Sếp, máy tính đang offline. Lệnh của Sếp đã vào hàng đợi và sẽ chạy ngay khi máy tính online!' 
+              : `Dạ Sếp, em đã tiếp nhận lệnh${attachmentsToSend.length > 0 ? ' kèm ảnh' : ''} và đang xử lý trên máy tính!`
+            }
+          </div>
+        `;
+        if (isOffline) {
+          const voiceQueued = 'Dạ Sếp Nam, máy tính đang offline, em đã lưu lệnh vào hàng đợi rồi ạ.';
+          if (document.getElementById('tts-auto-toggle').checked) {
+            playVietnameseAudio(voiceQueued);
+          }
+          showVoiceToast('Hàng đợi offline', voiceQueued, false);
+        } else {
+          const voiceAck = 'Dạ Sếp Nam, em đã nhận lệnh và đang thực hiện trên máy tính rồi ạ.';
+          if (document.getElementById('tts-auto-toggle').checked) {
+            playVietnameseAudio(voiceAck);
+          }
+          showVoiceToast('Đã nhận lệnh', voiceAck, false);
+        }
+      }
+    } catch (err) {
+      chatCont.innerHTML += `
+        <div class="bubble agent" style="border-left: 3px solid #ef4444; background: rgba(239, 68, 68, 0.1);">
+          <div class="bubble-role" style="color: #ef4444;">LỖI MẠNG</div>
+          Sếp Nam ơi, không thể kết nối tới server: ${err.message}.
+        </div>
+      `;
+      const voiceFail = `Sếp Nam ơi, mất kết nối mạng rồi ạ: ${err.message}`;
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(voiceFail);
+      }
+      showVoiceToast('Lỗi mạng', voiceFail, true);
+    }
+
+    chatCont.scrollTop = chatCont.scrollHeight;
+  }
+
+  function saveSettings() {
+    initAuth();
+    alert('Đã lưu cài đặt!');
+  }
+
+  window.addEventListener('load', () => {
+    updatePwaBannerVisibility();
+    initAuth();
+  });
+</script>
+</body>
+</html>

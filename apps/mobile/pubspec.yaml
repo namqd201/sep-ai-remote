@@ -1,0 +1,31 @@
+name: sep_ai_remote
+description: "Sếp AI Remote - Mobile Voice Control & Realtime Monitor for Antigravity"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  provider: ^6.1.2
+  http: ^1.2.2
+  web_socket_channel: ^3.0.1
+  flutter_tts: ^4.2.1
+  speech_to_text: ^7.0.0
+  flutter_local_notifications: ^18.0.1
+  shared_preferences: ^2.3.2
+  intl: ^0.19.0
+  uuid: ^4.5.1
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,25 @@
+{
+  "name": "sep-ai-remote-monorepo",
+  "version": "1.0.0",
+  "description": "Sếp AI Remote - Mobile Voice Control & Realtime Monitor for Antigravity",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "node --test apps/backend/dist/tests/backend.test.js apps/windows-bridge/dist/tests/bridge.test.js",
+    "start": "node scripts/start-all.js",
+    "tunnel": "node scripts/tunnel.js",
+    "queue:list": "node scripts/task-queue-cli.js list",
+    "queue:next": "node scripts/task-queue-cli.js next",
+    "start:backend": "node scripts/start-backend.js",
+    "start:bridge": "node scripts/start-bridge.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

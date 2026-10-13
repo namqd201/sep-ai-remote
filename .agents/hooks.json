@@ -1,0 +1,12 @@
+{
+  "sep-ai-remote-notifier": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node scripts/hook-notifier.js",
+        "timeout": 5
+      }
+    ]
+  }
+}

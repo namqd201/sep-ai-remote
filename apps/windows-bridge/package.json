@@ -1,0 +1,26 @@
+{
+  "name": "@sep-ai/windows-bridge",
+  "version": "1.0.0",
+  "description": "Windows Agent Bridge connecting Antigravity to Sếp AI Remote",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "tsc --noEmit",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "dependencies": {
+    "@sep-ai/shared": "workspace:*",
+    "dotenv": "^16.4.7",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/ws": "^8.5.14",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
