@@ -1,5 +1,57 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import crypto from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { EdgeTTS } from '@andresaya/edge-tts';
 import { db } from '../db/database.js';
+
+const execFileAsync = promisify(execFile);
+
+async function synthesizeEdgePython(
+  text: string,
+  voice: string,
+  rate?: string,
+  pitch?: string
+): Promise<Buffer> {
+  const tempId = crypto.randomUUID();
+  const textFilePath = path.join(os.tmpdir(), `tts_input_${tempId}.txt`);
+  const outFilePath = path.join(os.tmpdir(), `tts_output_${tempId}.mp3`);
+
+  await fs.writeFile(textFilePath, text, 'utf8');
+
+  const args = [
+    '-m',
+    'edge_tts',
+    '--voice',
+    voice,
+    '--file',
+    textFilePath,
+    '--write-media',
+    outFilePath
+  ];
+
+  if (rate) {
+    args.push('--rate', rate);
+  }
+  if (pitch) {
+    args.push('--pitch', pitch);
+  }
+
+  try {
+    await execFileAsync('python', args, {
+      windowsHide: true,
+      timeout: 30000
+    });
+
+    const buffer = await fs.readFile(outFilePath);
+    return buffer;
+  } finally {
+    await fs.unlink(textFilePath).catch(() => {});
+    await fs.unlink(outFilePath).catch(() => {});
+  }
+}
 
 export interface VoiceOption {
   id: string;
@@ -119,21 +171,35 @@ export class TtsService {
 
     const voice = AVAILABLE_VOICES.find(v => v.id === targetVoiceId) || AVAILABLE_VOICES[0];
 
-    // 1. Thử phát qua Edge Neural TTS nếu cấu hình là edge
+    // 1. Thử phát qua Edge Neural TTS (Python CLI with DRM v2)
     if (voice.provider === 'edge' && voice.edgeVoice) {
       try {
-        const tts = new EdgeTTS();
-        await tts.synthesize(cleanText, voice.edgeVoice, {
-          rate: voice.rate || '+0%',
-          pitch: voice.pitch || '+0Hz'
-        });
-        const buffer = await tts.toBuffer();
+        const buffer = await synthesizeEdgePython(
+          cleanText,
+          voice.edgeVoice,
+          voice.rate,
+          voice.pitch
+        );
         if (buffer && buffer.length > 0) {
           this.audioCache.set(cacheKey, buffer);
           return buffer;
         }
-      } catch (edgeErr) {
-        console.warn(`[TtsService] Lỗi tổng hợp giọng Edge (${voice.name}), fallback sang Google TTS:`, edgeErr);
+      } catch (pythonErr) {
+        console.warn(`[TtsService] Lỗi tổng hợp giọng Edge qua Python (${voice.name}), thử fallback edge-tts npm:`, pythonErr);
+        try {
+          const tts = new EdgeTTS();
+          await tts.synthesize(cleanText, voice.edgeVoice, {
+            rate: voice.rate || '+0%',
+            pitch: voice.pitch || '+0Hz'
+          });
+          const buffer = await tts.toBuffer();
+          if (buffer && buffer.length > 0) {
+            this.audioCache.set(cacheKey, buffer);
+            return buffer;
+          }
+        } catch (edgeErr) {
+          console.warn(`[TtsService] Lỗi tổng hợp giọng Edge (${voice.name}), fallback sang Google TTS:`, edgeErr);
+        }
       }
     }
 
