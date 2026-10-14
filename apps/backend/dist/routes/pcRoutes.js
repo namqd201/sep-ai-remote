@@ -21,6 +21,28 @@ router.get('/sessions', authService.authenticateMiddleware, (_req, res) => {
         projectGroups
     });
 });
+// Giám sát Quota tài khoản Antigravity (Models & Usage)
+router.get('/quota', authService.authenticateMiddleware, (_req, res) => {
+    const quota = wsGateway.getCachedQuota();
+    res.json({
+        success: true,
+        quota
+    });
+});
+// Làm mới Quota từ Antigravity Live
+router.post('/quota/refresh', authService.authenticateMiddleware, async (_req, res) => {
+    const sent = wsGateway.requestQuotaRefresh();
+    // Đợi ngắn để bridge phản hồi cập nhật mới nếu đang online
+    if (sent) {
+        await new Promise((r) => setTimeout(r, 1200));
+    }
+    const quota = wsGateway.getCachedQuota();
+    res.json({
+        success: true,
+        sent,
+        quota
+    });
+});
 // Giám sát sức khỏe phần cứng PC
 router.get('/health', authService.authenticateMiddleware, async (_req, res) => {
     try {

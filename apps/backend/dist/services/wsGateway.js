@@ -18,8 +18,16 @@ export class WsGateway {
     };
     cachedSessions = [];
     cachedProjectGroups = [];
+    cachedQuota = null;
     init(server) {
         this.wss = new WebSocketServer({ server, path: '/ws' });
+        const savedQuota = db.getSetting('antigravity_quota');
+        if (savedQuota) {
+            try {
+                this.cachedQuota = JSON.parse(savedQuota);
+            }
+            catch (_) { }
+        }
         // Cấu hình dispatcher cho taskService
         taskService.setBridgeDispatcher((task) => this.dispatchTaskToBridge(task));
         taskService.setBridgeDirectiveSender((sessionId, message, taskId) => this.sendDirectiveToBridge(sessionId, message, taskId));
@@ -109,7 +117,8 @@ export class WsGateway {
                         success: true,
                         role: client.role,
                         bridgeOnline: this.bridgeStatus.isOnline,
-                        sessions: this.cachedSessions
+                        sessions: this.cachedSessions,
+                        quota: this.cachedQuota
                     },
                     timestamp: new Date().toISOString()
                 }));
@@ -140,6 +149,15 @@ export class WsGateway {
                     const payload = message.payload;
                     this.cachedSessions = payload.sessions || [];
                     this.cachedProjectGroups = payload.projectGroups || [];
+                    this.broadcastToMobile(message);
+                }
+                break;
+            }
+            case WsEventType.QUOTA_UPDATED: {
+                if (client.role === UserRole.BRIDGE) {
+                    this.cachedQuota = message.payload;
+                    db.setSetting('antigravity_quota', JSON.stringify(this.cachedQuota));
+                    console.log(`[WsGateway] Đã nhận cập nhật Quota từ Bridge: ${this.cachedQuota.planName} (${this.cachedQuota.groups.length} groups)`);
                     this.broadcastToMobile(message);
                 }
                 break;
@@ -242,6 +260,20 @@ export class WsGateway {
     }
     getCachedProjectGroups() {
         return this.cachedProjectGroups;
+    }
+    getCachedQuota() {
+        return this.cachedQuota;
+    }
+    requestQuotaRefresh() {
+        if (this.bridgeSocket && this.bridgeSocket.readyState === WebSocket.OPEN) {
+            this.bridgeSocket.send(JSON.stringify({
+                event: WsEventType.GET_QUOTA,
+                payload: {},
+                timestamp: new Date().toISOString()
+            }));
+            return true;
+        }
+        return false;
     }
 }
 export const wsGateway = new WsGateway();

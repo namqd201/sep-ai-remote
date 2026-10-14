@@ -28,5 +28,8 @@ var WsEventType;
     // Chat/Interaction
     WsEventType["CHAT_MESSAGE"] = "chat_message";
     WsEventType["NOTIFICATION"] = "notification";
+    // Quota & Usage Events
+    WsEventType["QUOTA_UPDATED"] = "quota_updated";
+    WsEventType["GET_QUOTA"] = "get_quota";
 })(WsEventType || (exports.WsEventType = WsEventType = {}));
 //# sourceMappingURL=websocket.js.map

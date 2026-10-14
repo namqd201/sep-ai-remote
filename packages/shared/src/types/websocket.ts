@@ -31,7 +31,11 @@ export enum WsEventType {
 
   // Chat/Interaction
   CHAT_MESSAGE = 'chat_message',
-  NOTIFICATION = 'notification'
+  NOTIFICATION = 'notification',
+
+  // Quota & Usage Events
+  QUOTA_UPDATED = 'quota_updated',
+  GET_QUOTA = 'get_quota'
 }
 
 export interface WsMessage<T = unknown> {

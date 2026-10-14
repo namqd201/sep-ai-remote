@@ -12,7 +12,8 @@ import {
   AgentSessionSummary,
   ProjectGroup,
   Task,
-  TaskEvent
+  TaskEvent,
+  AntigravityQuotaSummary
 } from '@sep-ai/shared';
 
 interface ClientSocket {
@@ -36,9 +37,17 @@ export class WsGateway {
   };
   private cachedSessions: AgentSessionSummary[] = [];
   private cachedProjectGroups: ProjectGroup[] = [];
+  private cachedQuota: AntigravityQuotaSummary | null = null;
 
   public init(server: HttpServer): void {
     this.wss = new WebSocketServer({ server, path: '/ws' });
+
+    const savedQuota = db.getSetting('antigravity_quota');
+    if (savedQuota) {
+      try {
+        this.cachedQuota = JSON.parse(savedQuota);
+      } catch (_) {}
+    }
 
     // Cấu hình dispatcher cho taskService
     taskService.setBridgeDispatcher((task: Task) => this.dispatchTaskToBridge(task));
@@ -145,7 +154,8 @@ export class WsGateway {
               success: true,
               role: client.role,
               bridgeOnline: this.bridgeStatus.isOnline,
-              sessions: this.cachedSessions
+              sessions: this.cachedSessions,
+              quota: this.cachedQuota
             },
             timestamp: new Date().toISOString()
           })
@@ -185,6 +195,16 @@ export class WsGateway {
           };
           this.cachedSessions = payload.sessions || [];
           this.cachedProjectGroups = payload.projectGroups || [];
+          this.broadcastToMobile(message);
+        }
+        break;
+      }
+
+      case WsEventType.QUOTA_UPDATED: {
+        if (client.role === UserRole.BRIDGE) {
+          this.cachedQuota = message.payload as AntigravityQuotaSummary;
+          db.setSetting('antigravity_quota', JSON.stringify(this.cachedQuota));
+          console.log(`[WsGateway] Đã nhận cập nhật Quota từ Bridge: ${this.cachedQuota.planName} (${this.cachedQuota.groups.length} groups)`);
           this.broadcastToMobile(message);
         }
         break;
@@ -328,6 +348,24 @@ export class WsGateway {
 
   public getCachedProjectGroups(): ProjectGroup[] {
     return this.cachedProjectGroups;
+  }
+
+  public getCachedQuota(): AntigravityQuotaSummary | null {
+    return this.cachedQuota;
+  }
+
+  public requestQuotaRefresh(): boolean {
+    if (this.bridgeSocket && this.bridgeSocket.readyState === WebSocket.OPEN) {
+      this.bridgeSocket.send(
+        JSON.stringify({
+          event: WsEventType.GET_QUOTA,
+          payload: {},
+          timestamp: new Date().toISOString()
+        })
+      );
+      return true;
+    }
+    return false;
   }
 }
 

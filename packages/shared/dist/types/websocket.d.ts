@@ -19,7 +19,9 @@ export declare enum WsEventType {
     APPROVAL_REQUIRED = "approval_required",
     TASK_NEEDS_CONFIRMATION = "task_needs_confirmation",
     CHAT_MESSAGE = "chat_message",
-    NOTIFICATION = "notification"
+    NOTIFICATION = "notification",
+    QUOTA_UPDATED = "quota_updated",
+    GET_QUOTA = "get_quota"
 }
 export interface WsMessage<T = unknown> {
     event: WsEventType;

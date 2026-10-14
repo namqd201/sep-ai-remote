@@ -972,9 +972,15 @@
       <button class="drawer-btn" onclick="toggleDrawer()">☰</button>
       <h1><img src="/app-avatar.png" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent); vertical-align: middle; margin-right: 6px; box-shadow: 0 0 8px rgba(37,99,235,0.4);"> Nhân viên quèn</h1>
     </div>
-    <div id="ws-badge" style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
-      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning); display: inline-block;"></span>
-      <span>Đang kết nối</span>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="header-quota-btn" type="button" onclick="openQuotaModal()" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 20px; padding: 4px 9px; font-size: 0.72rem; color: #38BDF8; display: flex; align-items: center; gap: 4px; cursor: pointer;" title="Xem Quota tài khoản Antigravity">
+        <span>💎</span>
+        <span id="header-quota-val" style="font-weight: 700;">--%</span>
+      </button>
+      <div id="ws-badge" style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning); display: inline-block;"></span>
+        <span>Đang kết nối</span>
+      </div>
     </div>
   </header>
 
@@ -1084,6 +1090,80 @@
         <div id="health-extra" style="font-size: 0.7rem; color: #64748B; margin-top: 6px; display: flex; justify-content: space-between;">
           <span id="health-disk-val">💽 Ổ đĩa: --</span>
           <span id="health-host-val">💻 Host: --</span>
+        </div>
+      </div>
+
+      <!-- ANTIGRAVITY QUOTA & USAGE CARD -->
+      <div id="ai-quota-card" class="card" onclick="openQuotaModal()" style="padding: 12px 14px; margin-bottom: 14px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; cursor: pointer; transition: transform 0.15s, border-color 0.15s;" title="Chạm để xem chi tiết hạn mức Quota">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: #38BDF8; display: flex; align-items: center; gap: 6px;">
+            <span>💎</span>
+            <span>HẠN MỨC QUOTA AI (MODELS &amp; USAGE)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span id="quota-card-plan-badge" class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+              Google AI Pro
+            </span>
+            <span style="font-size: 0.75rem; color: #64748B;">&gt;</span>
+          </div>
+        </div>
+
+        <!-- 2 Columns: Gemini vs Claude & GPT -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <!-- Gemini Models Mini -->
+          <div style="background: rgba(30, 41, 59, 0.55); border: 1px solid rgba(255,255,255,0.06); padding: 8px 10px; border-radius: 8px;">
+            <div style="font-size: 0.72rem; font-weight: 600; color: #E2E8F0; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+              <span>✨</span> Gemini Models
+            </div>
+            <div style="margin-bottom: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94A3B8;">
+                <span>Tuần:</span>
+                <span id="quota-mini-gemini-weekly" style="font-weight: 700; color: #F59E0B;">--%</span>
+              </div>
+              <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 2px; overflow: hidden;">
+                <div id="quota-bar-gemini-weekly" style="width: 0%; height: 100%; background: #F59E0B; transition: width 0.3s;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94A3B8;">
+                <span>5 Giờ:</span>
+                <span id="quota-mini-gemini-5h" style="font-weight: 700; color: #10B981;">--%</span>
+              </div>
+              <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 2px; overflow: hidden;">
+                <div id="quota-bar-gemini-5h" style="width: 0%; height: 100%; background: #10B981; transition: width 0.3s;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Claude & GPT Mini -->
+          <div style="background: rgba(30, 41, 59, 0.55); border: 1px solid rgba(255,255,255,0.06); padding: 8px 10px; border-radius: 8px;">
+            <div style="font-size: 0.72rem; font-weight: 600; color: #E2E8F0; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+              <span>🧠</span> Claude &amp; GPT
+            </div>
+            <div style="margin-bottom: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94A3B8;">
+                <span>Tuần:</span>
+                <span id="quota-mini-3p-weekly" style="font-weight: 700; color: #38BDF8;">--%</span>
+              </div>
+              <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 2px; overflow: hidden;">
+                <div id="quota-bar-3p-weekly" style="width: 0%; height: 100%; background: #38BDF8; transition: width 0.3s;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94A3B8;">
+                <span>5 Giờ:</span>
+                <span id="quota-mini-3p-5h" style="font-weight: 700; color: #10B981;">--%</span>
+              </div>
+              <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 2px; overflow: hidden;">
+                <div id="quota-bar-3p-5h" style="width: 0%; height: 100%; background: #10B981; transition: width 0.3s;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 8px; font-size: 0.7rem; color: #64748B; display: flex; justify-content: space-between; align-items: center;">
+          <span id="quota-card-reset-hint">⏱️ Đang đồng bộ hạn mức...</span>
+          <span style="color: #38BDF8; font-weight: 500;">Chi tiết &gt;</span>
         </div>
       </div>
 
@@ -1668,6 +1748,86 @@
       <textarea id="diff-modal-raw-text" style="display: none;"></textarea>
     </div>
   </div>
+
+  <!-- MODAL THEO DÕI QUOTA VÀ CREDITS (MODELS & USAGE) -->
+  <div id="quota-viewer-modal" class="modal-overlay" onclick="if(event.target===this) closeQuotaModal()" style="z-index: 9998;">
+    <div class="modal-sheet" style="max-height: 90vh; overflow-y: auto; background: #0D1117 !important; border: 1px solid #30363D !important; border-radius: 14px !important; padding: 18px 16px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.85); width: 94vw; max-width: 600px;">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; border-bottom: 1px solid #21262D; padding-bottom: 12px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #F0F6FC; margin: 0;">Models &amp; Usage</h3>
+            <button id="quota-modal-refresh-btn" type="button" onclick="refreshQuotaData()" style="background: none; border: none; color: #58A6FF; font-size: 16px; cursor: pointer; padding: 2px 4px; display: inline-flex; align-items: center;" title="Làm mới Quota">
+              🔄
+            </button>
+          </div>
+          <div style="font-size: 0.78rem; color: #8B949E; margin-top: 3px;">
+            Manage your model quota and credits.
+          </div>
+        </div>
+        <button type="button" onclick="closeQuotaModal()" style="background: none; border: none; color: #8B949E; font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;">
+          ✕
+        </button>
+      </div>
+
+      <!-- Plan Section -->
+      <div style="background: #161B22; border: 1px solid #30363D; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+        <div style="font-size: 0.72rem; color: #8B949E; font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">
+          Plan
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: #F0F6FC;">
+              Your Plan: <span id="quota-modal-plan-name" style="color: #58A6FF;">Google AI Pro</span>
+            </div>
+            <div id="quota-modal-user-email" style="font-size: 0.76rem; color: #8B949E; margin-top: 2px;">
+              wwyhhha@gmail.com
+            </div>
+          </div>
+          <a id="quota-modal-upgrade-btn" href="https://antigravity.google/g1-upgrade" target="_blank" rel="noopener noreferrer" style="background: #238636; color: #fff; font-size: 0.76rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center;">
+            Upgrade
+          </a>
+        </div>
+        <div id="quota-modal-plan-desc" style="font-size: 0.72rem; color: #8B949E; margin-top: 6px;">
+          You can upgrade to a Google AI Ultra plan to receive higher rate limits.
+        </div>
+      </div>
+
+      <!-- Model Credits Section -->
+      <div style="background: #161B22; border: 1px solid #30363D; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+        <div style="font-size: 0.72rem; color: #8B949E; font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">
+          Model Credits
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <div style="font-size: 0.86rem; font-weight: 600; color: #F0F6FC;">
+            Enable AI Credit Overages
+          </div>
+          <div style="width: 36px; height: 20px; background: #30363D; border-radius: 10px; position: relative; opacity: 0.7;">
+            <div style="width: 16px; height: 16px; background: #8B949E; border-radius: 50%; position: absolute; top: 2px; left: 2px;"></div>
+          </div>
+        </div>
+        <div style="font-size: 0.72rem; color: #8B949E; margin-top: 6px; line-height: 1.4;">
+          When toggled on, Antigravity will use your AI credits to fulfill model requests once you're out of model quota. Antigravity will always use your model quota first before using AI credits.
+        </div>
+      </div>
+
+      <!-- Dynamic Quota Groups Container -->
+      <div id="quota-modal-groups-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px;">
+        <!-- Gemini Models & Claude and GPT models will be rendered here -->
+      </div>
+
+      <!-- Footer Policy / Description -->
+      <div style="background: rgba(13, 17, 23, 0.6); border: 1px solid #21262D; border-radius: 8px; padding: 10px 12px; font-size: 0.7rem; color: #8B949E; line-height: 1.45; margin-bottom: 10px;">
+        💡 Within each group, models share a weekly limit and a 5-hour limit. Quota is consumed proportionally to the cost of the tokens. Thus, limits will last longer with shorter tasks or using more cost-effective models. The 5-hour limit smooths out aggregate demand to fairly distribute global capacity across all users, while your weekly limit is tied directly to your individual tier.
+      </div>
+
+      <!-- Status timestamp -->
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: #6E7681; padding: 0 4px;">
+        <span id="quota-modal-status-text">🟢 Kết nối trực tiếp Antigravity</span>
+        <span id="quota-modal-timestamp">Cập nhật: --:--</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1704,7 +1864,8 @@
     bgAudioActive: false,
     systemNotificationGranted: false,
     telegramSettings: { botToken: '', chatId: '', enabled: true },
-    diffStore: []
+    diffStore: [],
+    quota: null
   };
 
   // --- XỬ LÝ ĐÍNH KÈM ẢNH TỪ ĐIỆN THOẠI ---
@@ -2324,8 +2485,10 @@
         fetchSessions();
         fetchTasks();
         fetchSettings();
+        fetchQuotaData();
         updateNotifPermissionUI();
         updateBgAudioUI();
+        setInterval(fetchQuotaData, 30000);
       }
     } catch (err) {
       console.error('Lỗi auth:', err);
@@ -2423,6 +2586,14 @@
       }
     } else if (msg.event === 'auto_process_status') {
       updateAutoProcessUI(msg.payload.enabled);
+    } else if (msg.event === 'authenticated') {
+      if (msg.payload && msg.payload.quota) {
+        state.quota = msg.payload.quota;
+        renderQuotaUi();
+      }
+    } else if (msg.event === 'quota_updated') {
+      state.quota = msg.payload;
+      renderQuotaUi();
     }
   }
 
@@ -2450,6 +2621,184 @@
     if (data.status) {
       state.isPcOnline = data.status.isOnline;
       updatePcStatusUI(data.status);
+    }
+  }
+
+  // --- ANTIGRAVITY QUOTA & USAGE (MODELS & USAGE) ---
+  async function fetchQuotaData() {
+    if (!state.token) return;
+    try {
+      const res = await fetch('/api/pc/quota', { headers: { 'Authorization': `Bearer ${state.token}` } });
+      const data = await res.json();
+      if (data.quota) {
+        state.quota = data.quota;
+        renderQuotaUi();
+      }
+    } catch (e) {
+      console.warn('Lỗi fetchQuotaData:', e);
+    }
+  }
+
+  async function refreshQuotaData() {
+    const btn = document.getElementById('quota-modal-refresh-btn');
+    if (btn) btn.classList.add('animate-spin');
+    try {
+      const res = await fetch('/api/pc/quota/refresh', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (data.quota) {
+        state.quota = data.quota;
+        renderQuotaUi();
+      }
+    } catch (e) {
+      console.warn('Lỗi refreshQuotaData:', e);
+    } finally {
+      if (btn) {
+        setTimeout(() => btn.classList.remove('animate-spin'), 600);
+      }
+    }
+  }
+
+  function renderQuotaUi() {
+    const quota = state.quota;
+    if (!quota) return;
+
+    // 1. Header quick badge
+    const headerVal = document.getElementById('header-quota-val');
+    let geminiWeeklyPct = null;
+    let otherWeeklyPct = null;
+
+    for (const group of quota.groups || []) {
+      const isGemini = group.displayName && group.displayName.toLowerCase().includes('gemini');
+      const wb = (group.buckets || []).find(b => b.window === 'weekly' || b.bucketId.includes('weekly'));
+      if (isGemini && wb) geminiWeeklyPct = wb.percentage;
+      else if (!isGemini && wb) otherWeeklyPct = wb.percentage;
+    }
+
+    if (headerVal) {
+      if (geminiWeeklyPct != null && otherWeeklyPct != null) {
+        headerVal.innerText = `${geminiWeeklyPct}% | ${otherWeeklyPct}%`;
+      } else if (geminiWeeklyPct != null) {
+        headerVal.innerText = `${geminiWeeklyPct}%`;
+      }
+    }
+
+    // 2. Dashboard Mini Card
+    const planBadge = document.getElementById('quota-card-plan-badge');
+    if (planBadge && quota.planName) {
+      planBadge.innerText = quota.planName;
+    }
+
+    for (const group of quota.groups || []) {
+      const isGemini = group.displayName && group.displayName.toLowerCase().includes('gemini');
+      const prefix = isGemini ? 'gemini' : '3p';
+      for (const bucket of group.buckets || []) {
+        const isWeekly = bucket.window === 'weekly' || bucket.bucketId.includes('weekly');
+        const suffix = isWeekly ? 'weekly' : '5h';
+        const pctEl = document.getElementById(`quota-mini-${prefix}-${suffix}`);
+        const barEl = document.getElementById(`quota-bar-${prefix}-${suffix}`);
+        if (pctEl) {
+          pctEl.innerText = `${bucket.percentage}%`;
+          pctEl.style.color = bucket.percentage > 50 ? '#10B981' : bucket.percentage > 20 ? '#F59E0B' : '#EF4444';
+        }
+        if (barEl) {
+          barEl.style.width = `${bucket.percentage}%`;
+          barEl.style.background = bucket.percentage > 50 ? '#10B981' : bucket.percentage > 20 ? '#F59E0B' : '#EF4444';
+        }
+      }
+    }
+
+    const resetHintEl = document.getElementById('quota-card-reset-hint');
+    if (resetHintEl) {
+      const geminiGroup = (quota.groups || []).find(g => g.displayName.toLowerCase().includes('gemini'));
+      const weeklyBucket = geminiGroup?.buckets?.find(b => b.window === 'weekly');
+      if (weeklyBucket?.resetTimeFormatted) {
+        resetHintEl.innerText = `⏱️ Gemini hồi phục sau: ${weeklyBucket.resetTimeFormatted}`;
+      } else {
+        resetHintEl.innerText = `🕒 Cập nhật: ${new Date(quota.lastUpdated).toLocaleTimeString('vi-VN')}`;
+      }
+    }
+
+    // 3. Modal details
+    const modalPlanName = document.getElementById('quota-modal-plan-name');
+    if (modalPlanName && quota.planName) modalPlanName.innerText = quota.planName;
+
+    const modalUserEmail = document.getElementById('quota-modal-user-email');
+    if (modalUserEmail && quota.userEmail) modalUserEmail.innerText = quota.userEmail;
+
+    const modalPlanDesc = document.getElementById('quota-modal-plan-desc');
+    if (modalPlanDesc && quota.upgradeText) modalPlanDesc.innerText = quota.upgradeText;
+
+    const modalGroupsCont = document.getElementById('quota-modal-groups-container');
+    if (modalGroupsCont && Array.isArray(quota.groups)) {
+      modalGroupsCont.innerHTML = quota.groups.map(renderQuotaGroupHtml).join('');
+    }
+
+    const modalStatus = document.getElementById('quota-modal-status-text');
+    if (modalStatus) {
+      modalStatus.innerHTML = quota.isLive
+        ? '<span style="color: #3FB950;">🟢 Kết nối trực tiếp Antigravity</span>'
+        : `<span style="color: #D29922;">🟡 ${escapeHtml(quota.statusMessage || 'Dữ liệu lưu gần nhất')}</span>`;
+    }
+
+    const modalTimestamp = document.getElementById('quota-modal-timestamp');
+    if (modalTimestamp) {
+      modalTimestamp.innerText = `Cập nhật: ${new Date(quota.lastUpdated).toLocaleTimeString('vi-VN')}`;
+    }
+  }
+
+  function renderQuotaGroupHtml(group) {
+    const isGemini = group.displayName && group.displayName.toLowerCase().includes('gemini');
+    const icon = isGemini ? '✨' : '🧠';
+    const bucketsHtml = (group.buckets || []).map(b => {
+      const pct = b.percentage;
+      const color = pct > 50 ? '#3FB950' : pct > 20 ? '#D29922' : '#F85149';
+      return `
+        <div style="padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <div style="font-size: 0.84rem; font-weight: 600; color: #E6EDF3;">${escapeHtml(b.displayName)}</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: ${color}; font-family: ui-monospace, monospace;">${pct}%</div>
+          </div>
+          <div style="width: 100%; height: 6px; background: #21262D; border-radius: 3px; overflow: hidden; margin-bottom: 6px;">
+            <div style="width: ${pct}%; height: 100%; background: ${color}; border-radius: 3px; transition: width 0.4s ease;"></div>
+          </div>
+          ${b.description ? `<div style="font-size: 0.72rem; color: #8B949E; line-height: 1.4;">${escapeHtml(b.description)}</div>` : ''}
+          ${b.resetTimeFormatted ? `<div style="font-size: 0.72rem; color: #58A6FF; margin-top: 3px;">⏳ Hồi phục sau: <b>${escapeHtml(b.resetTimeFormatted)}</b></div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div style="background: #161B22; border: 1px solid #30363D; border-radius: 10px; padding: 12px 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <div style="font-size: 0.92rem; font-weight: 700; color: #F0F6FC; display: flex; align-items: center; gap: 6px;">
+            <span>${icon}</span>
+            <span>${escapeHtml(group.displayName)}</span>
+          </div>
+        </div>
+        ${group.description ? `<div style="font-size: 0.72rem; color: #8B949E; margin-bottom: 8px;">${escapeHtml(group.description)}</div>` : ''}
+        ${bucketsHtml}
+      </div>
+    `;
+  }
+
+  function openQuotaModal() {
+    const modal = document.getElementById('quota-viewer-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      renderQuotaUi();
+      if (!state.quota || (Date.now() - new Date(state.quota.lastUpdated).getTime() > 10000)) {
+        refreshQuotaData();
+      }
+    }
+  }
+
+  function closeQuotaModal() {
+    const modal = document.getElementById('quota-viewer-modal');
+    if (modal) {
+      modal.style.display = 'none';
     }
   }
 

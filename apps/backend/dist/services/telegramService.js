@@ -4,6 +4,7 @@ import { db } from '../db/database.js';
 import { ttsService } from './ttsService.js';
 import { taskService } from './taskService.js';
 import { PcHealthService } from './pcHealthService.js';
+import { wsGateway } from './wsGateway.js';
 import { exec } from 'node:child_process';
 export class TelegramService {
     isPolling = false;
@@ -109,6 +110,9 @@ export class TelegramService {
             else if (data === 'list_tasks') {
                 await this.sendRecentTasks(chatId, token);
             }
+            else if (data === 'check_quota') {
+                await this.sendQuotaStatus(chatId, token);
+            }
             return;
         }
         // 2. Xử lý Tin nhắn từ người dùng
@@ -153,19 +157,24 @@ export class TelegramService {
             const keyboard = {
                 inline_keyboard: [
                     [
-                        { text: '📸 Chụp màn hình PC', callback_data: 'screenshot' },
+                        { text: '💎 Quota AI (Models)', callback_data: 'check_quota' },
                         { text: '📊 Sức khỏe PC', callback_data: 'health_pc' }
                     ],
                     [
-                        { text: '📋 Danh sách Task', callback_data: 'list_tasks' },
-                        { text: '💤 Cho PC đi ngủ', callback_data: 'sleep_pc' }
+                        { text: '📸 Chụp màn hình PC', callback_data: 'screenshot' },
+                        { text: '📋 Danh sách Task', callback_data: 'list_tasks' }
                     ],
                     [
-                        { text: '🌐 Mở Web App Nhân viên quèn', url: 'https://padding-shifting-useable.ngrok-free.dev' }
+                        { text: '💤 Cho PC đi ngủ', callback_data: 'sleep_pc' },
+                        { text: '🌐 Mở Web App', url: 'https://padding-shifting-useable.ngrok-free.dev' }
                     ]
                 ]
             };
             await this.sendMessageWithKeyboard(chatId, welcome, keyboard, token);
+            return;
+        }
+        if (text === '/quota' || text.toLowerCase() === 'quota') {
+            await this.sendQuotaStatus(chatId, token);
             return;
         }
         if (text === '/screenshot') {
@@ -305,6 +314,45 @@ export class TelegramService {
         catch (_) {
             return false;
         }
+    }
+    async sendQuotaStatus(chatId, token) {
+        const botToken = token || this.getBotToken();
+        if (!botToken)
+            return false;
+        let quota = wsGateway.getCachedQuota();
+        if (!quota) {
+            wsGateway.requestQuotaRefresh();
+            await new Promise((r) => setTimeout(r, 1200));
+            quota = wsGateway.getCachedQuota();
+        }
+        if (!quota) {
+            return this.sendMessage(chatId, '⚠️ Chưa có dữ liệu Quota từ Antigravity. Vui lòng đảm bảo Windows Agent Bridge đang chạy.', botToken);
+        }
+        let text = `📊 **QUOTA TÀI KHOẢN ANTIGRAVITY**\n`;
+        text += `🌟 **Gói:** ${quota.planName || 'Google AI Pro'}\n`;
+        if (quota.userEmail) {
+            text += `👤 **Tài khoản:** \`${quota.userEmail}\`\n`;
+        }
+        text += `\n`;
+        for (const group of quota.groups) {
+            text += `🔹 **${group.displayName}:**\n`;
+            for (const bucket of group.buckets) {
+                const icon = bucket.percentage > 50 ? '🟢' : bucket.percentage > 20 ? '🟡' : '🔴';
+                const resetStr = bucket.resetTimeFormatted ? ` (Hồi phục sau: ${bucket.resetTimeFormatted})` : '';
+                text += `  ${icon} ${bucket.displayName}: **${bucket.percentage}%**${resetStr}\n`;
+            }
+            text += `\n`;
+        }
+        text += `🕒 _Cập nhật lúc: ${new Date(quota.lastUpdated).toLocaleTimeString('vi-VN')} (${quota.isLive ? 'Live' : 'Cached'})_`;
+        const kb = {
+            inline_keyboard: [
+                [
+                    { text: '🔄 Làm mới Quota', callback_data: 'check_quota' },
+                    { text: '🌐 Mở Web App', url: 'https://padding-shifting-useable.ngrok-free.dev' }
+                ]
+            ]
+        };
+        return this.sendMessageWithKeyboard(chatId, text, kb, botToken);
     }
     async sendRecentTasks(chatId, token) {
         const botToken = token || this.getBotToken();

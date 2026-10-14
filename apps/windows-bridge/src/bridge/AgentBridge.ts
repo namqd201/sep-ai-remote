@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import os from 'node:os';
 import { config } from '../config.js';
 import { antigravityAdapter } from '../adapter/AntigravityAdapter.js';
+import { antigravityQuotaService } from '../adapter/AntigravityQuotaService.js';
 import { taskQueue } from '../queue/TaskQueue.js';
 import {
   WsEventType,
@@ -10,7 +11,8 @@ import {
   Task,
   TaskEvent,
   DeviceType,
-  PairResponse
+  PairResponse,
+  AntigravityQuotaSummary
 } from '@sep-ai/shared';
 
 export class AgentBridge {
@@ -21,6 +23,7 @@ export class AgentBridge {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private syncTimer: NodeJS.Timeout | null = null;
+  private quotaTimer: NodeJS.Timeout | null = null;
 
   public async start(): Promise<void> {
     console.log('[Bridge] Đang khởi động Windows Agent Bridge...');
@@ -145,6 +148,13 @@ export class AgentBridge {
         console.log('[Bridge] Server đã xác thực phiên làm việc thành công!');
         this.sendBridgeStatus();
         this.sendSessionsUpdate();
+        this.sendQuotaUpdate(false);
+        break;
+      }
+
+      case WsEventType.GET_QUOTA: {
+        console.log('[Bridge] Nhận yêu cầu cập nhật Quota từ Server...');
+        this.sendQuotaUpdate(true);
         break;
       }
 
@@ -200,8 +210,10 @@ export class AgentBridge {
     this.isConnected = false;
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     if (this.syncTimer) clearInterval(this.syncTimer);
+    if (this.quotaTimer) clearInterval(this.quotaTimer);
     this.heartbeatTimer = null;
     this.syncTimer = null;
+    this.quotaTimer = null;
   }
 
   private startPeriodicSync(): void {
@@ -219,6 +231,11 @@ export class AgentBridge {
       await this.sendBridgeStatus();
       await this.sendSessionsUpdate();
     }, 4000);
+
+    // Đồng bộ Quota định kỳ mỗi 30 giây
+    this.quotaTimer = setInterval(async () => {
+      await this.sendQuotaUpdate(false);
+    }, 30000);
   }
 
   private async sendBridgeStatus(): Promise<void> {
@@ -247,6 +264,20 @@ export class AgentBridge {
       payload: { sessions, projectGroups },
       timestamp: new Date().toISOString()
     });
+  }
+
+  public async sendQuotaUpdate(forceRefresh = false): Promise<void> {
+    try {
+      const quota = await antigravityQuotaService.getQuotaSummary(forceRefresh);
+      this.sendWsMessage({
+        event: WsEventType.QUOTA_UPDATED,
+        payload: quota,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[Bridge] Lỗi gửi cập nhật Quota:', msg);
+    }
   }
 
   private sendWsMessage(msg: WsMessage): void {
