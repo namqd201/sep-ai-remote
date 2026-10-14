@@ -811,6 +811,145 @@
       font-size: 0.82rem;
       margin-left: 3px;
     }
+
+    /* Antigravity-style Rich Diff Viewer Modal */
+    #diff-viewer-modal .modal-sheet {
+      width: 96vw;
+      max-width: 1050px;
+      height: 90vh;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 !important;
+      background: #0D1117 !important;
+      border: 1px solid #30363D !important;
+      border-radius: 14px !important;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.85);
+    }
+    .diff-modal-header {
+      background: #161B22;
+      border-bottom: 1px solid #30363D;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 10px;
+    }
+    .diff-breadcrumb {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82rem;
+      color: #8B949E;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      min-width: 0;
+    }
+    .diff-breadcrumb .crumb-part {
+      color: #8B949E;
+    }
+    .diff-breadcrumb .crumb-sep {
+      color: #484F58;
+      font-size: 0.75rem;
+    }
+    .diff-breadcrumb .crumb-file {
+      color: #58A6FF;
+      font-weight: 600;
+    }
+    .diff-table-container {
+      flex: 1;
+      overflow: auto;
+      background: #0D1117;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      -webkit-overflow-scrolling: touch;
+    }
+    .diff-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+    }
+    .diff-table-row {
+      height: 22px;
+    }
+    .diff-table-row:hover {
+      filter: brightness(1.15);
+    }
+    .diff-num {
+      width: 38px;
+      min-width: 38px;
+      max-width: 38px;
+      padding: 0 6px;
+      text-align: right;
+      color: #484F58;
+      user-select: none;
+      vertical-align: top;
+      font-size: 11px;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .diff-num-old {
+      background: rgba(0, 0, 0, 0.25);
+    }
+    .diff-num-new {
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .diff-sign {
+      width: 18px;
+      min-width: 18px;
+      text-align: center;
+      user-select: none;
+      font-weight: 700;
+      color: #6E7681;
+      padding: 0 2px;
+    }
+    .diff-line-code {
+      padding: 0 8px;
+      white-space: pre;
+      color: #E6EDF3;
+      word-break: normal;
+    }
+    /* Add row (Green) */
+    .row-add {
+      background: rgba(46, 160, 67, 0.22);
+    }
+    .row-add .diff-num-new {
+      color: #3FB950;
+      font-weight: 700;
+    }
+    .row-add .diff-sign {
+      color: #3FB950;
+    }
+    .row-add .diff-line-code {
+      color: #E6EDF3;
+    }
+    /* Del row (Red) */
+    .row-del {
+      background: rgba(248, 81, 73, 0.24);
+    }
+    .row-del .diff-num-old {
+      color: #F85149;
+      font-weight: 700;
+    }
+    .row-del .diff-sign {
+      color: #F85149;
+    }
+    .row-del .diff-line-code {
+      color: #E6EDF3;
+    }
+    /* Hunk row */
+    .row-hunk {
+      background: rgba(56, 139, 253, 0.12);
+    }
+    .row-hunk .diff-num {
+      color: #58A6FF;
+    }
+    .row-hunk .diff-sign, .row-hunk .diff-line-code {
+      color: #79C0FF;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -1493,6 +1632,42 @@
       </div>
     </div>
   </div>
+
+  <!-- MODAL XEM CHI TIẾT CODE DIFF (GIỐNG ANTIGRAVITY) -->
+  <div id="diff-viewer-modal" class="modal-overlay" onclick="if(event.target===this) closeDiffViewerModal()" style="z-index: 9999;">
+    <div class="modal-sheet">
+      <!-- Header -->
+      <div class="diff-modal-header">
+        <div class="diff-breadcrumb" id="diff-modal-breadcrumb">
+          <!-- Dynamic breadcrumb & badges -->
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+          <button type="button" class="btn" onclick="copyModalDiffCode()" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.08); color: #E6EDF3; border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; gap: 4px;" title="Sao chép nội dung code">
+            📋 Copy
+          </button>
+          <button type="button" onclick="closeDiffViewerModal()" style="background: none; border: none; color: #8B949E; font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Diff Stats Bar -->
+      <div id="diff-modal-stats-bar" style="background: #0D1117; padding: 6px 14px; font-size: 0.74rem; color: #8B949E; border-bottom: 1px solid #21262D; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+        <div id="diff-modal-stats-text">0 thay đổi</div>
+        <div id="diff-modal-instruction-text" style="color: #7DD3FC; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;"></div>
+      </div>
+
+      <!-- Code Diff Table Container -->
+      <div class="diff-table-container">
+        <table class="diff-table">
+          <tbody id="diff-modal-table-body">
+            <!-- Dynamic Diff Rows -->
+          </tbody>
+        </table>
+      </div>
+      <textarea id="diff-modal-raw-text" style="display: none;"></textarea>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1528,7 +1703,8 @@
     liveDetailTimer: null,
     bgAudioActive: false,
     systemNotificationGranted: false,
-    telegramSettings: { botToken: '', chatId: '', enabled: true }
+    telegramSettings: { botToken: '', chatId: '', enabled: true },
+    diffStore: []
   };
 
   // --- XỬ LÝ ĐÍNH KÈM ẢNH TỪ ĐIỆN THOẠI ---
@@ -2835,6 +3011,202 @@
     return { added, removed };
   }
 
+  function parseUnifiedDiffToRows(diffText, targetContent, replacementContent, startLine) {
+    const rows = [];
+    if (diffText && diffText.trim()) {
+      const lines = diffText.split('\n');
+      let oldLineNum = 1;
+      let newLineNum = 1;
+
+      for (const line of lines) {
+        if (line.startsWith('---') || line.startsWith('+++')) {
+          continue;
+        }
+        if (line.startsWith('@@')) {
+          // Format @@ -oldStart,oldCount +newStart,newCount @@
+          const match = line.match(/@@\s*-(\d+)(?:,\d+)?\s*\+(\d+)(?:,\d+)?\s*@@/);
+          if (match) {
+            oldLineNum = parseInt(match[1], 10);
+            newLineNum = parseInt(match[2], 10);
+          }
+          rows.push({
+            type: 'hunk',
+            oldNum: '...',
+            newNum: '...',
+            sign: '@',
+            text: line
+          });
+          continue;
+        }
+
+        if (line.startsWith('+')) {
+          rows.push({
+            type: 'add',
+            oldNum: '',
+            newNum: newLineNum++,
+            sign: '+',
+            text: line.slice(1)
+          });
+        } else if (line.startsWith('-')) {
+          rows.push({
+            type: 'del',
+            oldNum: oldLineNum++,
+            newNum: '',
+            sign: '-',
+            text: line.slice(1)
+          });
+        } else {
+          const content = line.startsWith(' ') ? line.slice(1) : line;
+          rows.push({
+            type: 'ctx',
+            oldNum: oldLineNum++,
+            newNum: newLineNum++,
+            sign: ' ',
+            text: content
+          });
+        }
+      }
+      return rows;
+    }
+
+    // Fallback: If no unified diff, but we have targetContent (removed) and replacementContent (added)
+    let curLine = startLine ? parseInt(startLine, 10) : 1;
+    if (targetContent) {
+      const delLines = targetContent.split('\n');
+      for (const l of delLines) {
+        rows.push({
+          type: 'del',
+          oldNum: curLine++,
+          newNum: '',
+          sign: '-',
+          text: l
+        });
+      }
+    }
+    curLine = startLine ? parseInt(startLine, 10) : 1;
+    if (replacementContent) {
+      const addLines = replacementContent.split('\n');
+      for (const l of addLines) {
+        rows.push({
+          type: 'add',
+          oldNum: '',
+          newNum: curLine++,
+          sign: '+',
+          text: l
+        });
+      }
+    }
+    return rows;
+  }
+
+  function renderBreadcrumbHtml(filePath) {
+    if (!filePath) return '<span class="crumb-file">File</span>';
+    const normalized = filePath.replace(/\\/g, '/');
+    const parts = normalized.split('/').filter(Boolean);
+    if (parts.length === 0) return `<span class="crumb-file">${escapeHtml(filePath)}</span>`;
+
+    const fileName = parts[parts.length - 1];
+    const dirParts = parts.slice(0, parts.length - 1);
+
+    let html = '';
+    for (const part of dirParts) {
+      html += `<span class="crumb-part">${escapeHtml(part)}</span><span class="crumb-sep">&gt;</span>`;
+    }
+    html += `${getFileBadge(fileName)} <span class="crumb-file">${escapeHtml(fileName)}</span>`;
+    return html;
+  }
+
+  function openDiffViewerModal(item) {
+    if (!item) return;
+    const modal = document.getElementById('diff-viewer-modal');
+    if (!modal) return;
+
+    // Breadcrumb
+    const breadcrumbEl = document.getElementById('diff-modal-breadcrumb');
+    if (breadcrumbEl) {
+      breadcrumbEl.innerHTML = renderBreadcrumbHtml(item.filePath || item.fileName || 'file');
+    }
+
+    // Stats Bar
+    const statsEl = document.getElementById('diff-modal-stats-text');
+    const counts = getDiffLineCounts(item.diff, item.targetContent, item.replacementContent);
+    const added = item.addedLines != null ? item.addedLines : counts.added;
+    const removed = item.removedLines != null ? item.removedLines : counts.removed;
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <span class="diff-stat-add" style="font-size: 0.82rem; margin-right: 8px;">+${added}</span>
+        <span class="diff-stat-del" style="font-size: 0.82rem; margin-right: 12px;">-${removed}</span>
+        <span>${item.lineRange ? `📍 Dòng ${escapeHtml(item.lineRange)}` : ''}</span>
+      `;
+    }
+
+    const instructionEl = document.getElementById('diff-modal-instruction-text');
+    if (instructionEl) {
+      instructionEl.innerText = item.instruction ? `💡 ${item.instruction}` : '';
+      instructionEl.title = item.instruction || '';
+    }
+
+    // Parse and render rows
+    let startLineNum = 1;
+    if (item.lineRange) {
+      const m = String(item.lineRange).match(/(\d+)/);
+      if (m) startLineNum = parseInt(m[1], 10);
+    }
+    const rows = parseUnifiedDiffToRows(item.diff, item.targetContent, item.replacementContent, startLineNum);
+    const tbody = document.getElementById('diff-modal-table-body');
+    if (tbody) {
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="padding: 24px; text-align: center; color: #8B949E;">Không có nội dung thay đổi nào được ghi lại.</td></tr>`;
+      } else {
+        tbody.innerHTML = rows.map(r => {
+          const rowClass = r.type === 'add' ? 'row-add' : r.type === 'del' ? 'row-del' : r.type === 'hunk' ? 'row-hunk' : '';
+          return `
+            <tr class="diff-table-row ${rowClass}">
+              <td class="diff-num diff-num-old">${r.oldNum != null ? r.oldNum : ''}</td>
+              <td class="diff-num diff-num-new">${r.newNum != null ? r.newNum : ''}</td>
+              <td class="diff-sign">${r.sign || ''}</td>
+              <td class="diff-line-code">${escapeHtml(r.text)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // Raw text for copy button
+    const rawEl = document.getElementById('diff-modal-raw-text');
+    if (rawEl) {
+      rawEl.value = item.diff || item.replacementContent || '';
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function closeDiffViewerModal() {
+    const modal = document.getElementById('diff-viewer-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  function copyModalDiffCode() {
+    const rawEl = document.getElementById('diff-modal-raw-text');
+    if (!rawEl || !rawEl.value) {
+      alert('Không có nội dung để sao chép.');
+      return;
+    }
+    navigator.clipboard.writeText(rawEl.value).then(() => {
+      alert('✅ Đã sao chép nội dung code diff vào clipboard!');
+    }).catch(() => {
+      alert('Không thể sao chép.');
+    });
+  }
+
+  function openDiffViewerByIndex(idx) {
+    if (state.diffStore && state.diffStore[idx]) {
+      openDiffViewerModal(state.diffStore[idx]);
+    }
+  }
+
   function renderStepHtml(step) {
     let icon = '⚙️';
     let typeClass = '';
@@ -2866,35 +3238,28 @@
       const counts = getDiffLineCounts(step.fileDiff, step.targetContent, step.replacementContent);
       const added = step.addedLines != null ? step.addedLines : counts.added;
       const removed = step.removedLines != null ? step.removedLines : counts.removed;
+      const diffContent = step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : '');
+
+      const diffIdx = state.diffStore.length;
+      state.diffStore.push({
+        filePath: step.filePath || step.detail,
+        fileName,
+        diff: diffContent,
+        targetContent: step.targetContent,
+        replacementContent: step.replacementContent,
+        instruction: step.instruction,
+        lineRange: step.lineRange,
+        addedLines: added,
+        removedLines: removed
+      });
 
       let instructionHtml = '';
       if (step.instruction) {
         instructionHtml = `<div style="font-size: 0.74rem; color: #CBD5E1; margin-top: 3px;">💡 ${escapeHtml(step.instruction)}</div>`;
       }
 
-      let diffHtml = '';
-      const diffContent = step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : '');
-      if (diffContent) {
-        const diffId = 'diff_' + (step.id || Math.random().toString(36).substring(2, 9));
-        diffHtml = `
-          <div class="step-diff-wrapper">
-            <button type="button" id="${diffId}-btn" class="btn-diff-toggle" onclick="event.stopPropagation(); toggleStepDiff('${diffId}')">
-              🔍 Xem nội dung đã sửa
-            </button>
-            <div id="${diffId}" class="diff-box" style="display: none;" onclick="event.stopPropagation()">
-              <div class="diff-header">
-                <span style="font-weight: 500; color: #7DD3FC; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">📄 ${escapeHtml(step.filePath || step.detail || 'File diff')}</span>
-                <button type="button" class="diff-copy-btn" onclick="copyDiffText('${diffId}')" title="Sao chép diff">📋 Copy</button>
-              </div>
-              <textarea id="${diffId}-raw" style="display: none;">${escapeHtml(diffContent)}</textarea>
-              <pre class="diff-content">${formatDiffLines(diffContent)}</pre>
-            </div>
-          </div>
-        `;
-      }
-
       return `
-        <div class="live-step-item ${typeClass}">
+        <div class="live-step-item ${typeClass}" onclick="openDiffViewerByIndex(${diffIdx})" style="cursor: pointer;" title="Chạm để xem chi tiết code đã sửa giống Antigravity">
           <span class="step-icon">${icon}</span>
           <div class="step-body">
             <div class="step-title" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
@@ -2905,7 +3270,9 @@
               <span class="diff-stat-del">-${removed}</span>
             </div>
             ${instructionHtml}
-            ${diffHtml}
+            <div style="font-size: 0.72rem; color: #38BDF8; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;">
+              🔍 Chạm để xem diff 2 cột giống Antigravity &gt;
+            </div>
           </div>
           <span class="step-arrow">&gt;</span>
         </div>
@@ -2947,6 +3314,7 @@
       actionTextEl.innerText = task.currentActionText;
     }
     if (stepsListEl && task.liveSteps) {
+      state.diffStore = [];
       stepsListEl.innerHTML = task.liveSteps.map(renderStepHtml).join('');
       stepsListEl.scrollTop = stepsListEl.scrollHeight;
     }
@@ -2995,14 +3363,26 @@
     const itemsHtml = task.report.filesModified.map((f, idx) => {
       const fc = fileChangesMap.get(f) || { filePath: f, fileName: f.split(/[/\\]/).pop() };
       const diffContent = fc.diff;
-      const diffId = `rep_diff_${(task.id || 't').replace(/[^a-zA-Z0-9_-]/g, '_')}_${idx}`;
       const counts = getDiffLineCounts(diffContent);
       const added = fc.addedLines != null ? fc.addedLines : counts.added;
       const removed = fc.removedLines != null ? fc.removedLines : counts.removed;
       const fileName = fc.fileName || f.split(/[/\\]/).pop();
 
+      const diffIdx = state.diffStore.length;
+      state.diffStore.push({
+        filePath: fc.filePath || f,
+        fileName,
+        diff: diffContent,
+        targetContent: fc.targetContent,
+        replacementContent: fc.replacementContent,
+        instruction: fc.instruction,
+        lineRange: fc.lineRange,
+        addedLines: added,
+        removedLines: removed
+      });
+
       return `
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+        <div onclick="openDiffViewerByIndex(${diffIdx})" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 10px; cursor: pointer;" title="Chạm để xem chi tiết code đã sửa giống Antigravity">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <div style="min-width: 0; flex: 1;">
               <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
@@ -3020,22 +3400,10 @@
               ${fc.instruction ? `<div style="font-size: 0.75rem; color: #CBD5E1; margin-top: 4px;">💡 ${escapeHtml(fc.instruction)}</div>` : ''}
               ${fc.lineRange ? `<div style="font-size: 0.72rem; color: #38BDF8; margin-top: 2px;">📍 ${escapeHtml(fc.lineRange)}</div>` : ''}
             </div>
-            ${diffContent ? `
-              <button type="button" id="${diffId}-btn" class="btn-diff-toggle" onclick="event.stopPropagation(); toggleStepDiff('${diffId}')" style="flex-shrink: 0;">
-                🔍 Xem nội dung đã sửa
-              </button>
-            ` : ''}
-          </div>
-          ${diffContent ? `
-            <div id="${diffId}" class="diff-box" style="display: none; margin-top: 8px;" onclick="event.stopPropagation()">
-              <div class="diff-header">
-                <span>📄 Chi tiết thay đổi</span>
-                <button type="button" class="diff-copy-btn" onclick="copyDiffText('${diffId}')">📋 Copy</button>
-              </div>
-              <textarea id="${diffId}-raw" style="display: none;">${escapeHtml(diffContent)}</textarea>
-              <pre class="diff-content">${formatDiffLines(diffContent)}</pre>
+            <div style="font-size: 0.75rem; color: #38BDF8; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+              🔍 Xem diff &gt;
             </div>
-          ` : ''}
+          </div>
         </div>
       `;
     }).join('');
