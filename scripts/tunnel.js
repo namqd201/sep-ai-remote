@@ -95,7 +95,7 @@ export async function startTunnel() {
 
     console.log(`[Tunnel] Đang khởi động Ngrok với tên miền tĩnh vĩnh viễn: ${ngrokDomain}...`);
     
-    const ngrokArgs = ['http', '3000'];
+    const ngrokArgs = ['http', '127.0.0.1:3000'];
     if (ngrokDomain) {
       ngrokArgs.push(`--url=${ngrokDomain}`);
     }
