@@ -566,6 +566,109 @@ export class TaskService {
           : 'Đã gửi từ chối và chỉ đạo cho Antigravity'
     };
   }
+
+  public async replyToTask(
+    taskId: string,
+    directivePrompt: string,
+    attachments?: Array<{ name: string; mimeType: string; data?: string; url?: string; localPath?: string }>
+  ): Promise<{ success: boolean; task?: Task; message?: string }> {
+    const task = db.getTask(taskId);
+    if (!task) {
+      return { success: false, message: 'Task không tồn tại' };
+    }
+
+    if (!directivePrompt || !directivePrompt.trim()) {
+      return { success: false, message: 'Nội dung chỉ đạo không được để trống' };
+    }
+
+    // Xử lý lưu ảnh đính kèm bổ sung nếu có
+    const processedAttachments = attachments ? [...attachments] : [];
+    if (processedAttachments.length > 0) {
+      const uploadDir = path.resolve(process.cwd(), 'apps/backend/public/uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      for (const att of processedAttachments) {
+        if (att.data) {
+          try {
+            const cleanExt = (att.mimeType || 'image/png').split('/')[1] || 'png';
+            const fileName = `media_${Date.now()}_${uuidv4().substring(0, 8)}.${cleanExt}`;
+            const filePath = path.join(uploadDir, fileName);
+
+            const base64Data = att.data.replace(/^data:image\/\w+;base64,/, '');
+            fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+
+            att.url = `/uploads/${fileName}`;
+            att.localPath = filePath;
+
+            const targetSession = task.sessionId || '44939315-00af-4786-86be-c0e8740762a9';
+            const brainDir = path.join(
+              process.env.USERPROFILE || 'C:\\Users\\PC',
+              '.gemini', 'antigravity', 'brain', targetSession, '.user_uploaded'
+            );
+            if (!fs.existsSync(brainDir)) {
+              fs.mkdirSync(brainDir, { recursive: true });
+            }
+            const destPath = path.join(brainDir, fileName);
+            fs.copyFileSync(filePath, destPath);
+            att.localPath = destPath;
+
+            delete att.data;
+          } catch (err) {
+            console.error('[TaskService] Lỗi lưu ảnh chỉ đạo bổ sung:', err);
+          }
+        }
+      }
+      task.attachments = [...(task.attachments || []), ...processedAttachments];
+    }
+
+    const sessionId = task.sessionId;
+    if (!sessionId) {
+      return { success: false, message: 'Task không có session Antigravity liên kết' };
+    }
+
+    if (!this.isPcOnline || !this.bridgeDirectiveSender) {
+      return { success: false, message: 'Máy tính đang offline, không thể gửi chỉ đạo trực tiếp' };
+    }
+
+    const now = getVietnamNowIso();
+    task.status = TaskStatus.RUNNING;
+    task.updatedAt = now;
+    task.currentActionText = 'Đang thực hiện theo chỉ đạo bổ sung của Sếp Nam';
+    task.startVoiceText = `Dạ Sếp Nam, em đã nhận chỉ đạo bổ sung và bắt đầu làm tiếp việc: ${task.title} rồi ạ!`;
+    task.completionVoiceText = `Sếp Nam ơi, em đã làm xong theo chỉ đạo bổ sung cho việc ${task.title} rồi ạ. Sếp vào kiểm tra nhé!`;
+
+    db.saveTask(task);
+
+    // Chuẩn bị directive message gửi Antigravity
+    let fullDirective = `[CHỈ ĐẠO BỔ SUNG TỪ SẾP NAM CHO TASK: "${task.title}"]:\n${directivePrompt.trim()}`;
+    if (processedAttachments.length > 0) {
+      fullDirective += '\n\n📷 [ẢNH ĐÍNH KÈM CHỈ ĐẠO MỚI TỪ SẾP]:';
+      for (const att of processedAttachments) {
+        const pathOrUrl = att.localPath
+          ? `file:///${att.localPath.replace(/\\/g, '/')}`
+          : att.url || att.name;
+        fullDirective += `\n- ${att.name}: ${pathOrUrl}`;
+      }
+      fullDirective += '\n(Agent hãy dùng tool view_file để xem các ảnh đính kèm trên và thực hiện theo đúng chỉ đạo của Sếp!)';
+    }
+
+    const dispatched = this.bridgeDirectiveSender(sessionId, fullDirective, task.id);
+    if (!dispatched) {
+      return { success: false, message: 'Gửi chỉ đạo qua WebSocket tới PC thất bại' };
+    }
+
+    if (this.wsBroadcaster) {
+      this.wsBroadcaster('task_updated', task);
+    }
+
+    return {
+      success: true,
+      task,
+      message: 'Đã gửi chỉ đạo làm tiếp tới Antigravity thành công'
+    };
+  }
 }
 
 export const taskService = new TaskService();

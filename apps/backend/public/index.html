@@ -1820,6 +1820,11 @@
       clearInterval(state.liveDetailTimer);
       state.liveDetailTimer = null;
     }
+    if (isReplyRecording && replySpeechRecognition) {
+      replySpeechRecognition.stop();
+      isReplyRecording = false;
+    }
+    state.replyAttachments = [];
     document.getElementById('detail-modal').classList.remove('open');
   }
 
@@ -2610,8 +2615,60 @@
       `;
     }
 
-    const pillClass = task.needsConfirmation ? 'pill-WAITING_APPROVAL' : `pill-${task.status}`;
-    const statusText = task.needsConfirmation ? '💡 CẦN SẾP XÁC NHẬN' : (task.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (isRunning ? '⚡ ĐANG CHẠY' : task.status));
+    // Khối Reply / Chỉ đạo làm tiếp trực tiếp trong câu trả lời
+    let replyCardHtml = '';
+    if (!isWaiting) {
+      replyCardHtml = `
+        <div class="task-reply-card" style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid rgba(6, 182, 212, 0.4); border-radius: 14px; padding: 14px; margin-top: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.35);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 700; color: #38BDF8; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+              <span>💬</span> <span>CHỈ ĐẠO LÀM TIẾP / BẢO SỬA LẠI</span>
+            </div>
+            <span style="font-size: 0.72rem; color: #94A3B8; background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 10px;">Gửi trực tiếp vào máy</span>
+          </div>
+          <div style="font-size: 0.82rem; color: #CBD5E1; margin-bottom: 8px; line-height: 1.4;">
+            Nếu Sếp kiểm tra thấy Antigravity làm chưa ổn hoặc muốn bổ sung yêu cầu, hãy nhập lệnh chỉ đạo trực tiếp bên dưới:
+          </div>
+
+          <!-- Quick Suggestions -->
+          <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 6px;">
+            <button type="button" onclick="fillReplyTemplate('Chưa được em ơi, kiểm tra và sửa lại cẩn thận giúp anh nhé!')" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #E2E8F0; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">
+              🔄 Làm lại cẩn thận hơn
+            </button>
+            <button type="button" onclick="fillReplyTemplate('Em test lại tính năng này xem đã chạy thực tế được chưa nhé!')" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #E2E8F0; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">
+              🔍 Test lại thực tế
+            </button>
+            <button type="button" onclick="fillReplyTemplate('Chỉnh lại theo đúng yêu cầu ban đầu của anh, đừng bỏ sót phần nào nhé!')" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #E2E8F0; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;">
+              ✏️ Sửa đúng yêu cầu
+            </button>
+          </div>
+
+          <div style="position: relative;">
+            <textarea id="task-reply-input" class="input" style="width: 100%; min-height: 85px; resize: vertical; font-size: 0.9rem; padding: 10px 48px 10px 10px; border-radius: 8px; box-sizing: border-box; background: var(--bg); color: var(--text); border: 1px solid rgba(255,255,255,0.15);" placeholder="Nhập chỉ đạo làm lại hoặc bổ sung (hoặc bấm mic để nói tiếng Việt)..."></textarea>
+            
+            <!-- Mic button inside textarea -->
+            <button id="reply-mic-btn" type="button" onclick="toggleReplySpeechRecording()" style="position: absolute; right: 8px; top: 8px; width: 34px; height: 34px; border-radius: 50%; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); color: #38BDF8; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Nói tiếng Việt">
+              🎙️
+            </button>
+          </div>
+
+          <!-- Attachments preview -->
+          <div id="reply-attachments-preview" style="display: flex; gap: 8px; overflow-x: auto; margin-top: 8px;"></div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <div>
+              <input type="file" id="reply-file-input" accept="image/*" multiple style="display: none;" onchange="handleReplyImageUpload(this)">
+              <button type="button" onclick="document.getElementById('reply-file-input').click()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #E2E8F0; padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                📷 Thêm ảnh
+              </button>
+            </div>
+            <button id="btn-submit-task-reply" onclick="submitTaskReply('${task.id}')" style="background: linear-gradient(135deg, #0284c7, #06b6d4); color: #ffffff; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);">
+              🚀 Gửi chỉ đạo làm tiếp
+            </button>
+          </div>
+        </div>
+      `;
+    }
 
     cont.innerHTML = `
       <div style="margin-bottom: 12px;">
@@ -2641,6 +2698,7 @@
       ${liveBoxHtml}
       <hr style="border: none; border-top: 1px solid var(--surface-light); margin: 14px 0;">
       ${reportHtml}
+      ${replyCardHtml}
     `;
 
     document.getElementById('detail-modal').classList.add('open');
@@ -2721,6 +2779,190 @@
       fetchTasks();
     } catch (e) {
       showVoiceToast('Lỗi', e.message, true);
+    }
+  }
+
+  // --- CHỈ ĐẠO LÀM TIẾP / PHẢN HỒI TASK (REPLY) ---
+  let replySpeechRecognition = null;
+  let isReplyRecording = false;
+
+  function fillReplyTemplate(text) {
+    const input = document.getElementById('task-reply-input');
+    if (input) {
+      input.value = text;
+      input.focus();
+    }
+  }
+
+  function toggleReplySpeechRecording() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Trình duyệt chưa hỗ trợ ghi âm trực tiếp. Sếp vui lòng gõ nội dung vào ô nhé!');
+      return;
+    }
+
+    const micBtn = document.getElementById('reply-mic-btn');
+    const inputEl = document.getElementById('task-reply-input');
+
+    if (isReplyRecording && replySpeechRecognition) {
+      replySpeechRecognition.stop();
+      isReplyRecording = false;
+      if (micBtn) {
+        micBtn.style.background = 'rgba(6, 182, 212, 0.15)';
+        micBtn.style.color = '#38BDF8';
+        micBtn.innerText = '🎙️';
+      }
+      return;
+    }
+
+    replySpeechRecognition = new SpeechRecognition();
+    replySpeechRecognition.lang = 'vi-VN';
+    replySpeechRecognition.interimResults = true;
+    replySpeechRecognition.continuous = false;
+
+    replySpeechRecognition.onstart = () => {
+      isReplyRecording = true;
+      if (micBtn) {
+        micBtn.style.background = '#EF4444';
+        micBtn.style.color = '#FFFFFF';
+        micBtn.innerText = '🔴';
+      }
+    };
+
+    replySpeechRecognition.onresult = (event) => {
+      let text = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        text += event.results[i][0].transcript;
+      }
+      if (inputEl) {
+        inputEl.value = text;
+      }
+    };
+
+    replySpeechRecognition.onerror = (e) => {
+      console.warn('Speech error:', e);
+      isReplyRecording = false;
+      if (micBtn) {
+        micBtn.style.background = 'rgba(6, 182, 212, 0.15)';
+        micBtn.style.color = '#38BDF8';
+        micBtn.innerText = '🎙️';
+      }
+    };
+
+    replySpeechRecognition.onend = () => {
+      isReplyRecording = false;
+      if (micBtn) {
+        micBtn.style.background = 'rgba(6, 182, 212, 0.15)';
+        micBtn.style.color = '#38BDF8';
+        micBtn.innerText = '🎙️';
+      }
+    };
+
+    try {
+      replySpeechRecognition.start();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function handleReplyImageUpload(input) {
+    if (!input.files || input.files.length === 0) return;
+    if (!state.replyAttachments) state.replyAttachments = [];
+    const files = Array.from(input.files);
+    for (const f of files) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        state.replyAttachments.push({
+          name: f.name,
+          mimeType: f.type,
+          data: e.target.result
+        });
+        renderReplyAttachments();
+      };
+      reader.readAsDataURL(f);
+    }
+    input.value = '';
+  }
+
+  function renderReplyAttachments() {
+    const cont = document.getElementById('reply-attachments-preview');
+    if (!cont) return;
+    if (!state.replyAttachments || state.replyAttachments.length === 0) {
+      cont.innerHTML = '';
+      return;
+    }
+    cont.innerHTML = state.replyAttachments.map((att, idx) => `
+      <div style="position: relative; flex-shrink: 0;">
+        <img src="${att.data}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--primary);">
+        <button type="button" onclick="removeReplyAttachment(${idx})" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #EF4444; color: white; border: none; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function removeReplyAttachment(index) {
+    if (state.replyAttachments) {
+      state.replyAttachments.splice(index, 1);
+      renderReplyAttachments();
+    }
+  }
+
+  async function submitTaskReply(taskId) {
+    const inputEl = document.getElementById('task-reply-input');
+    const submitBtn = document.getElementById('btn-submit-task-reply');
+    if (!inputEl) return;
+    const promptText = inputEl.value.trim();
+
+    if (!promptText && (!state.replyAttachments || state.replyAttachments.length === 0)) {
+      alert('Sếp vui lòng nhập hoặc nói nội dung chỉ đạo làm tiếp nhé!');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Đang gửi chỉ đạo...';
+    }
+
+    const attachmentsToSend = state.replyAttachments ? [...state.replyAttachments] : [];
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({
+          prompt: promptText,
+          attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert('Lỗi: ' + (data.message || data.error || 'Không thể gửi chỉ đạo'));
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '🚀 Gửi chỉ đạo làm tiếp';
+        }
+        return;
+      }
+
+      // Gửi thành công
+      state.replyAttachments = [];
+      const voiceAck = data.task?.startVoiceText || 'Dạ Sếp Nam, em đã nhận chỉ đạo bổ sung và bắt đầu làm tiếp rồi ạ!';
+      showVoiceToast('⚡ ĐÃ GỬI CHỈ ĐẠO LÀM TIẾP', voiceAck, false);
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(voiceAck);
+      }
+
+      await fetchTasks();
+      openDetailModal(taskId);
+    } catch (err) {
+      alert('Lỗi kết nối: ' + err.message);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '🚀 Gửi chỉ đạo làm tiếp';
+      }
     }
   }
 

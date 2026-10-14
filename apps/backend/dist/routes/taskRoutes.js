@@ -95,5 +95,19 @@ router.post('/:id/respond', allowLocalOrAuth, async (req, res) => {
     }
     res.json(result);
 });
+// 9. Gửi chỉ đạo làm tiếp cho task (Reply / Follow-up Directive)
+router.post('/:id/reply', allowLocalOrAuth, async (req, res) => {
+    const { prompt, attachments } = req.body;
+    if (!prompt || !prompt.trim()) {
+        res.status(400).json({ error: 'Nội dung chỉ đạo không được để trống' });
+        return;
+    }
+    const result = await taskService.replyToTask(req.params.id, prompt, attachments);
+    if (!result.success) {
+        res.status(400).json(result);
+        return;
+    }
+    res.json(result);
+});
 export default router;
 //# sourceMappingURL=taskRoutes.js.map
