@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
 import { telegramService } from '../services/telegramService.js';
+import { taskService } from '../services/taskService.js';
 
 const router = Router();
 
@@ -28,7 +29,27 @@ router.post('/', (req, res) => {
       db.setSetting(key, String(value));
     }
 
+    if (settings.auto_process_queue !== undefined) {
+      taskService.setAutoProcessEnabled(settings.auto_process_queue === 'true');
+    }
+
     res.json({ success: true, message: 'Đã lưu cài đặt thành công.' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
+// Bật/tắt nhanh chế độ tự động xử lý task
+router.post('/auto-process', (req, res) => {
+  try {
+    const { enabled } = req.body as { enabled?: boolean };
+    taskService.setAutoProcessEnabled(Boolean(enabled));
+    res.json({
+      success: true,
+      enabled: Boolean(enabled),
+      message: enabled ? 'Đã bật chế độ tự động xử lý task.' : 'Đã tắt chế độ tự động xử lý task.'
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     res.status(500).json({ success: false, error: msg });

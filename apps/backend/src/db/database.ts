@@ -173,6 +173,16 @@ export class AppDatabase {
     return rowFallback ? this.mapTask(rowFallback) : null;
   }
 
+  public getRunningTasks(): Task[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM tasks 
+      WHERE status IN ('RUNNING', 'DISPATCHED')
+      ORDER BY created_at ASC
+    `);
+    const rows = stmt.all() as Record<string, unknown>[];
+    return rows.map((r) => this.mapTask(r));
+  }
+
   public getTask(id: string): Task | null {
     const stmt = this.db.prepare(`SELECT * FROM tasks WHERE id = ?`);
     const row = stmt.get(id) as Record<string, unknown> | undefined;

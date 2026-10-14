@@ -837,8 +837,16 @@
             ▶️ Làm task tiếp theo
           </button>
         </div>
-        <div style="font-size: 0.75rem; color: #94A3B8;">
-          💡 Sếp có thể bấm "Làm task tiếp theo" ở đây, hoặc bảo: "Em vào danh sách chờ lấy task làm đi" để Antigravity tự động lấy làm.
+        <div style="font-size: 0.75rem; color: #94A3B8; margin-bottom: 8px;">
+          💡 Sếp có thể bấm "Làm task tiếp theo" ở đây, hoặc bật Tự động xử lý task để Antigravity tự động làm lần lượt.
+        </div>
+        <div style="padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.78rem; color: #E2E8F0; display: flex; align-items: center; gap: 6px;">
+            <span>⚡</span> Tự động xử lý task: <b id="queue-auto-status" style="color: var(--text-muted);">Đang tắt</b>
+          </span>
+          <button class="btn" id="btn-quick-toggle-auto" onclick="quickToggleAutoProcess()" style="width: auto; padding: 4px 10px; font-size: 0.74rem; background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; cursor: pointer;">
+            Bật tự động
+          </button>
         </div>
       </div>
 
@@ -885,6 +893,30 @@
 
     <!-- TAB 4: SETTINGS -->
     <div id="tab-settings" class="tab-pane">
+      <!-- 0. TỰ ĐỘNG XỬ LÝ TASK LIÊN TỤC (AUTO-PROCESS QUEUE) -->
+      <div class="card" style="border: 1.5px solid rgba(16, 185, 129, 0.45); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.12); margin-bottom: 14px; background: rgba(16, 185, 129, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h4 style="font-size: 0.88rem; color: #34D399; text-transform: uppercase; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <span>⚡</span>
+            <span>Tự Động Xử Lý Task</span>
+          </h4>
+          <span id="auto-process-badge" class="badge" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted); font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;">
+            TẮT
+          </span>
+        </div>
+        <div style="font-size: 0.78rem; color: #94A3B8; margin-bottom: 12px; line-height: 1.45;">
+          Khi tích vào nó, Antigravity sẽ tự động xử lý lần lượt các task ở trong phần <b>Chờ làm</b> cho đến khi hết việc.
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.28); padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <label for="setting-auto-process-task" style="cursor: pointer; flex: 1; padding-right: 12px;">
+            <div style="font-size: 0.92rem; font-weight: 600; color: #F1F5F9;">Tự động xử lý task</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Tự động lấy task tiếp theo từ phần Chờ làm khi xong việc</div>
+          </label>
+          <input type="checkbox" id="setting-auto-process-task" onchange="toggleAutoProcessQueue(this.checked)" style="width: 22px; height: 22px; accent-color: #10B981; cursor: pointer;">
+        </div>
+      </div>
+
       <!-- 1. Voice AI & Thông báo phát tiếng chạy ngầm -->
       <div class="card" style="border: 1px solid rgba(6, 182, 212, 0.4); box-shadow: 0 4px 20px rgba(6, 182, 212, 0.1);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -1858,6 +1890,16 @@
       if (state.currentOpenTaskId === msg.payload.taskId) {
         openDetailModal(msg.payload.taskId);
       }
+    } else if (msg.event === 'auto_process_task_started') {
+      fetchTasks();
+      const taskTitle = msg.payload.title || '';
+      const voiceMsg = msg.payload.ttsVoiceText || `Dạ em tự động chuyển sang xử lý task tiếp theo: ${taskTitle}`;
+      showVoiceToast('⚡ TỰ ĐỘNG XỬ LÝ TASK', voiceMsg, false);
+      if (document.getElementById('tts-auto-toggle').checked) {
+        playVietnameseAudio(voiceMsg);
+      }
+    } else if (msg.event === 'auto_process_status') {
+      updateAutoProcessUI(msg.payload.enabled);
     }
   }
 
@@ -1919,10 +1961,74 @@
         if (tokenInput) tokenInput.value = state.telegramSettings.botToken;
         if (chatInput) chatInput.value = state.telegramSettings.chatId;
         if (enabledCheck) enabledCheck.checked = state.telegramSettings.enabled;
+
+        state.autoProcessQueue = data.settings.auto_process_queue === 'true';
+        updateAutoProcessUI(state.autoProcessQueue);
       }
     } catch (e) {
       console.warn('Lỗi fetchSettings:', e);
     }
+  }
+
+  function updateAutoProcessUI(enabled) {
+    state.autoProcessQueue = Boolean(enabled);
+    const autoCheck = document.getElementById('setting-auto-process-task');
+    if (autoCheck) autoCheck.checked = state.autoProcessQueue;
+
+    const badge = document.getElementById('auto-process-badge');
+    if (badge) {
+      badge.innerText = state.autoProcessQueue ? '⚡ ĐANG BẬT' : 'TẮT';
+      badge.style.background = state.autoProcessQueue ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.08)';
+      badge.style.color = state.autoProcessQueue ? '#34D399' : 'var(--text-muted)';
+    }
+
+    const qStatus = document.getElementById('queue-auto-status');
+    const qBtn = document.getElementById('btn-quick-toggle-auto');
+    if (qStatus) {
+      qStatus.innerText = state.autoProcessQueue ? 'Đang bật' : 'Đang tắt';
+      qStatus.style.color = state.autoProcessQueue ? '#34D399' : 'var(--text-muted)';
+    }
+    if (qBtn) {
+      qBtn.innerText = state.autoProcessQueue ? 'Tắt tự động' : 'Bật tự động';
+      qBtn.style.background = state.autoProcessQueue ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.2)';
+      qBtn.style.color = state.autoProcessQueue ? '#F87171' : '#34D399';
+      qBtn.style.borderColor = state.autoProcessQueue ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)';
+    }
+  }
+
+  async function toggleAutoProcessQueue(checked) {
+    try {
+      const res = await fetch('/api/settings/auto-process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({ enabled: checked })
+      });
+      const data = await res.json();
+      if (data.success) {
+        updateAutoProcessUI(checked);
+        const title = checked ? 'BẬT TỰ ĐỘNG XỬ LÝ TASK' : 'TẮT TỰ ĐỘNG XỬ LÝ TASK';
+        const msg = checked
+          ? 'Đã bật! Antigravity sẽ tự động xử lý lần lượt các task ở trong phần chờ làm.'
+          : 'Đã tắt chế độ tự động xử lý task.';
+        showVoiceToast(title, msg, false);
+        if (checked && document.getElementById('tts-auto-toggle').checked) {
+          playVietnameseAudio('Đã bật tự động xử lý các task trong phần chờ làm rồi Sếp ạ.');
+        }
+        fetchTasks();
+      } else {
+        alert('Lỗi: ' + (data.error || 'Không cập nhật được'));
+      }
+    } catch (err) {
+      alert('Lỗi kết nối: ' + err.message);
+    }
+  }
+
+  function quickToggleAutoProcess() {
+    const current = Boolean(state.autoProcessQueue);
+    toggleAutoProcessQueue(!current);
   }
 
   // 4c. CÀI ĐẶT GIỌNG ĐỌC AI TIẾNG VIỆT

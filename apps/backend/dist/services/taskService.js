@@ -25,6 +25,11 @@ export class TaskService {
         if (!prevState && online) {
             // Khi PC kết nối lại, tự động giải phóng hàng đợi offline
             this.flushOfflineQueue();
+            if (this.isAutoProcessEnabled()) {
+                setTimeout(() => {
+                    this.triggerNextInQueueIfIdle();
+                }, 1500);
+            }
         }
     }
     getPcOnlineState() {
@@ -109,6 +114,12 @@ export class TaskService {
         if (this.wsBroadcaster) {
             this.wsBroadcaster('task_updated', task);
         }
+        // Nếu chế độ tự động xử lý task đang bật, kiểm tra nếu worker rảnh thì lấy task làm ngay
+        if (this.isAutoProcessEnabled() && this.isPcOnline) {
+            setTimeout(() => {
+                this.triggerNextInQueueIfIdle();
+            }, 500);
+        }
         return { task, isDuplicate: false };
     }
     getActiveTaskForSession(sessionId) {
@@ -177,6 +188,13 @@ export class TaskService {
                     report: task.report
                 });
             }
+            // Tự động xử lý task tiếp theo từ hàng đợi nếu chế độ auto-process đang BẬT
+            if (this.isAutoProcessEnabled() && this.isPcOnline) {
+                console.log(`[TaskService] [AutoProcess] Task ${task.id} đã hoàn thành. Chuẩn bị lấy task tiếp theo sau 2 giây...`);
+                setTimeout(() => {
+                    this.triggerNextInQueueIfIdle();
+                }, 2000);
+            }
         }
         else if (status === TaskStatus.FAILED) {
             task.completedAt = now;
@@ -210,6 +228,13 @@ export class TaskService {
                     ttsVoiceText: voiceText,
                     report: task.report
                 });
+            }
+            // Tự động xử lý task tiếp theo từ hàng đợi nếu chế độ auto-process đang BẬT
+            if (this.isAutoProcessEnabled() && this.isPcOnline) {
+                console.log(`[TaskService] [AutoProcess] Task ${task.id} thất bại. Chuẩn bị lấy task tiếp theo sau 3 giây...`);
+                setTimeout(() => {
+                    this.triggerNextInQueueIfIdle();
+                }, 3000);
             }
         }
         else if (status === TaskStatus.WAITING_APPROVAL) {
@@ -313,6 +338,53 @@ export class TaskService {
         }
         const nextTask = queue[0];
         return this.executeQueuedTask(nextTask.id);
+    }
+    isAutoProcessEnabled() {
+        return db.getSetting('auto_process_queue') === 'true';
+    }
+    setAutoProcessEnabled(enabled) {
+        db.setSetting('auto_process_queue', enabled ? 'true' : 'false');
+        if (this.wsBroadcaster) {
+            this.wsBroadcaster('auto_process_status', { enabled });
+        }
+        if (enabled) {
+            setTimeout(() => {
+                this.triggerNextInQueueIfIdle();
+            }, 500);
+        }
+    }
+    triggerNextInQueueIfIdle() {
+        if (!this.isPcOnline || !this.bridgeDispatcher) {
+            console.log('[TaskService] [AutoProcess] PC đang offline, không kích hoạt task hàng đợi.');
+            return { success: false, message: 'PC đang offline.' };
+        }
+        if (!this.isAutoProcessEnabled()) {
+            return { success: false, message: 'Chế độ tự động xử lý task đang tắt.' };
+        }
+        const running = db.getRunningTasks();
+        if (running.length > 0) {
+            console.log(`[TaskService] [AutoProcess] Hiện có ${running.length} task đang chạy (${running[0].id} - ${running[0].title}), chưa kích hoạt task tiếp theo.`);
+            return { success: false, message: 'Đang có task chạy.' };
+        }
+        const queue = this.getWaitingQueueTasks();
+        if (queue.length === 0) {
+            console.log('[TaskService] [AutoProcess] Danh sách chờ đang trống.');
+            return { success: false, message: 'Danh sách chờ đang trống.' };
+        }
+        const nextTask = queue[0];
+        console.log(`[TaskService] [AutoProcess] ⚡ Tự động lấy task tiếp theo từ hàng đợi: ${nextTask.id} (${nextTask.title})`);
+        const result = this.executeQueuedTask(nextTask.id);
+        if (result.success && result.task) {
+            const voiceMsg = `Dạ em tự động chuyển sang xử lý task tiếp theo trong danh sách chờ: ${nextTask.title}`;
+            if (this.wsBroadcaster) {
+                this.wsBroadcaster('auto_process_task_started', {
+                    taskId: nextTask.id,
+                    title: nextTask.title,
+                    ttsVoiceText: voiceMsg
+                });
+            }
+        }
+        return result;
     }
     deleteQueuedTask(taskId) {
         const task = db.getTask(taskId);

@@ -157,6 +157,15 @@ export class AppDatabase {
         const rowFallback = stmtFallback.get();
         return rowFallback ? this.mapTask(rowFallback) : null;
     }
+    getRunningTasks() {
+        const stmt = this.db.prepare(`
+      SELECT * FROM tasks 
+      WHERE status IN ('RUNNING', 'DISPATCHED')
+      ORDER BY created_at ASC
+    `);
+        const rows = stmt.all();
+        return rows.map((r) => this.mapTask(r));
+    }
     getTask(id) {
         const stmt = this.db.prepare(`SELECT * FROM tasks WHERE id = ?`);
         const row = stmt.get(id);
