@@ -54,6 +54,8 @@ export interface Task {
     currentActionText?: string;
     needsConfirmation?: boolean;
     proposalText?: string;
+    startVoiceText?: string;
+    completionVoiceText?: string;
 }
 export interface CreateTaskDto {
     prompt: string;

@@ -1695,7 +1695,7 @@
     const borderColor = isError ? 'rgba(239, 68, 68, 0.5)' : 'rgba(6, 182, 212, 0.4)';
     const shadowColor = isError ? 'rgba(239, 68, 68, 0.3)' : 'rgba(6, 182, 212, 0.3)';
     const badgeColor = isError ? '#f87171' : '#38bdf8';
-    const badgeText = isError ? '⚠️ TASK THẤT BẠI / GẶP LỖI' : '🎉 ĐÃ XONG TASK MỚI';
+    const badgeText = title || (isError ? '⚠️ TASK THẤT BẠI / GẶP LỖI' : '⚡ THÔNG BÁO');
     const btnBg = isError ? '#ef4444' : 'var(--primary)';
     const btnColor = isError ? '#ffffff' : '#000000';
 
@@ -1902,30 +1902,34 @@
     } else if (msg.event === 'task_completed') {
       fetchTasks();
       const taskTitle = msg.payload.title || '';
-      const fallbackVoice = `Sếp Nam ơi, em đã làm xong task '${taskTitle}' mà sếp giao rồi. Sếp còn việc gì cần em làm nữa không ạ. Sếp vào kiểm tra task kia nhé.`;
+      const fallbackVoice = taskTitle
+        ? `Sếp Nam ơi, em đã làm xong việc ${taskTitle} rồi ạ. Sếp vào kiểm tra nhé!`
+        : `Sếp Nam ơi, em đã hoàn thành công việc sếp giao rồi ạ. Sếp vào kiểm tra nhé!`;
       const ttsText = msg.payload.ttsVoiceText || fallbackVoice;
       if (document.getElementById('tts-auto-toggle').checked) {
         playVoiceNotification(ttsText);
       }
-      showVoiceToast(taskTitle, ttsText);
+      showVoiceToast('🎉 ĐÃ XONG TASK MỚI', ttsText);
     } else if (msg.event === 'task_failed') {
       fetchTasks();
       const taskTitle = msg.payload.title || '';
-      const fallbackVoice = `Sếp Nam ơi, task '${taskTitle}' gặp lỗi trong lúc chạy rồi ạ. Sếp vào kiểm tra nhé.`;
+      const fallbackVoice = taskTitle
+        ? `Sếp Nam ơi, việc ${taskTitle} gặp lỗi trong lúc chạy rồi ạ. Sếp vào kiểm tra nhé!`
+        : `Sếp Nam ơi, việc sếp giao gặp lỗi trong lúc chạy rồi ạ. Sếp vào kiểm tra nhé!`;
       const ttsText = msg.payload.ttsVoiceText || fallbackVoice;
       if (document.getElementById('tts-auto-toggle').checked) {
         playVoiceNotification(ttsText);
       }
-      showVoiceToast(taskTitle, ttsText, true);
+      showVoiceToast('⚠️ TASK THẤT BẠI', ttsText, true);
     } else if (msg.event === 'task_needs_confirmation') {
       fetchTasks();
       const taskTitle = msg.payload.title || '';
-      const fallbackVoice = 'sếp ơi, em có đề xuất xử lý task như này ạ. Sếp vào đọc và confirm giúp em để em làm nhé';
+      const fallbackVoice = 'Sếp ơi, em có đề xuất xử lý task như này ạ. Sếp vào đọc và xác nhận giúp em để em làm nhé!';
       const ttsText = msg.payload.ttsVoiceText || fallbackVoice;
       if (document.getElementById('tts-auto-toggle').checked) {
         playVoiceNotification(ttsText);
       }
-      showVoiceToast('Cần Sếp xác nhận', ttsText, false);
+      showVoiceToast('⏳ CẦN SẾP XÁC NHẬN', ttsText, false);
       if (state.currentOpenTaskId === msg.payload.taskId) {
         openDetailModal(msg.payload.taskId);
       }
@@ -2732,8 +2736,8 @@
         playVietnameseAudio(data.message || 'Danh sách chờ đang trống Sếp ạ.');
         return;
       }
-      const voiceMsg = `Dạ em đã lấy task "${data.task.title}" từ danh sách chờ và đang bắt đầu thực hiện cho Sếp rồi ạ.`;
-      showVoiceToast('Đang thực hiện', voiceMsg, false);
+      const voiceMsg = data.task?.startVoiceText || `Dạ em đã lấy task "${data.task.title}" từ danh sách chờ và đang bắt đầu thực hiện cho Sếp rồi ạ.`;
+      showVoiceToast('⚡ BẮT ĐẦU TASK', voiceMsg, false);
       if (document.getElementById('tts-auto-toggle').checked) {
         playVietnameseAudio(voiceMsg);
       }
@@ -2754,8 +2758,8 @@
         showVoiceToast('Lỗi', data.message || 'Không thể chạy task', true);
         return;
       }
-      const voiceMsg = `Dạ em bắt đầu làm task "${data.task.title}" cho Sếp rồi ạ.`;
-      showVoiceToast('Đang thực hiện', voiceMsg, false);
+      const voiceMsg = data.task?.startVoiceText || `Dạ em bắt đầu thực hiện việc ${data.task.title} cho Sếp rồi ạ.`;
+      showVoiceToast('⚡ BẮT ĐẦU TASK', voiceMsg, false);
       if (document.getElementById('tts-auto-toggle').checked) {
         playVietnameseAudio(voiceMsg);
       }
@@ -2830,19 +2834,19 @@
 
       if (isQueued || (data.task && data.task.status === 'PENDING')) {
         const voiceQueued = 'Dạ em đã thêm task vào danh sách chờ cho Sếp rồi ạ. Khi nào cần, Sếp chỉ cần bảo là Antigravity sẽ tự động lấy làm ạ!';
-        showVoiceToast('Đã thêm vào DS chờ', voiceQueued, false);
+        showVoiceToast('⚡ ĐÃ THÊM VÀO DS CHỜ', voiceQueued, false);
         if (document.getElementById('tts-auto-toggle').checked) {
           playVietnameseAudio(voiceQueued);
         }
       } else if (data.task && data.task.status === 'QUEUED_OFFLINE') {
         const voiceQueuedOffline = 'Sếp Nam ơi, máy tính đang offline. Task đã được lưu vào hàng đợi và sẽ tự động chạy khi máy tính kết nối lại ạ.';
-        showVoiceToast('Đã lưu hàng đợi', voiceQueuedOffline, false);
+        showVoiceToast('⚡ ĐÃ LƯU HÀNG ĐỢI', voiceQueuedOffline, false);
         if (document.getElementById('tts-auto-toggle').checked) {
           playVietnameseAudio(voiceQueuedOffline);
         }
       } else {
-        const voiceSuccess = 'Dạ Sếp Nam, em đã nhận task và bắt đầu làm trên máy tính rồi ạ!';
-        showVoiceToast('Đã tiếp nhận task', voiceSuccess, false);
+        const voiceSuccess = data.task?.startVoiceText || 'Dạ Sếp Nam, em đã nhận task và bắt đầu làm trên máy tính rồi ạ!';
+        showVoiceToast('⚡ BẮT ĐẦU TASK', voiceSuccess, false);
         if (document.getElementById('tts-auto-toggle').checked) {
           playVietnameseAudio(voiceSuccess);
         }
@@ -2928,13 +2932,13 @@
           if (document.getElementById('tts-auto-toggle').checked) {
             playVietnameseAudio(voiceQueued);
           }
-          showVoiceToast('Hàng đợi offline', voiceQueued, false);
+          showVoiceToast('⚡ HÀNG ĐỢI OFFLINE', voiceQueued, false);
         } else {
-          const voiceAck = 'Dạ Sếp Nam, em đã nhận lệnh và đang thực hiện trên máy tính rồi ạ.';
+          const voiceAck = data.task?.startVoiceText || 'Dạ Sếp Nam, em đã nhận lệnh và đang thực hiện trên máy tính rồi ạ.';
           if (document.getElementById('tts-auto-toggle').checked) {
             playVietnameseAudio(voiceAck);
           }
-          showVoiceToast('Đã nhận lệnh', voiceAck, false);
+          showVoiceToast('⚡ BẮT ĐẦU TASK', voiceAck, false);
         }
       }
     } catch (err) {

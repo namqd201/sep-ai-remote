@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
 import { notificationService } from './notificationService.js';
 import { telegramService } from './telegramService.js';
+import { summarizeTaskPrompt } from './taskSummarizer.js';
 import {
   Task,
   TaskStatus,
@@ -65,7 +66,8 @@ export class TaskService {
     const taskId = `tsk_${uuidv4().substring(0, 8)}`;
     const now = getVietnamNowIso();
 
-    const taskTitle = dto.title || (dto.prompt.length > 40 ? `${dto.prompt.substring(0, 40)}...` : dto.prompt);
+    const summary = summarizeTaskPrompt(dto.prompt);
+    const taskTitle = dto.title || summary.shortTitle;
 
     // Xử lý lưu ảnh đính kèm (nếu có)
     const processedAttachments = dto.attachments ? [...dto.attachments] : undefined;
@@ -129,7 +131,10 @@ export class TaskService {
       createdByDevice,
       retryCount: 0,
       attachments: processedAttachments,
-      isQueued: Boolean(dto.isQueued)
+      isQueued: Boolean(dto.isQueued),
+      currentActionText: summary.shortAction,
+      startVoiceText: summary.startVoiceText,
+      completionVoiceText: summary.doneVoiceText
     };
 
     db.saveTask(task);
@@ -207,7 +212,9 @@ export class TaskService {
 
     if (status === TaskStatus.COMPLETED) {
       task.completedAt = now;
-      const voiceText = getTaskCompletionVoiceText(task.title);
+      const voiceText =
+        task.completionVoiceText ||
+        (task.prompt ? summarizeTaskPrompt(task.prompt).doneVoiceText : getTaskCompletionVoiceText(task.title));
 
       if (!task.report) {
         task.report = {
@@ -249,7 +256,7 @@ export class TaskService {
       }
     } else if (status === TaskStatus.FAILED) {
       task.completedAt = now;
-      const voiceText = getTaskFailureVoiceText(task.title, task.report?.errorDetails);
+      const voiceText = `Sếp Nam ơi, việc ${task.title} gặp lỗi trong lúc chạy rồi ạ. Sếp vào kiểm tra nhé!`;
 
       if (!task.report) {
         task.report = {
@@ -464,7 +471,10 @@ export class TaskService {
     const result = this.executeQueuedTask(nextTask.id);
 
     if (result.success && result.task) {
-      const voiceMsg = `Dạ em tự động chuyển sang xử lý task tiếp theo trong danh sách chờ: ${nextTask.title}`;
+      const voiceMsg =
+        result.task.startVoiceText ||
+        nextTask.startVoiceText ||
+        `Dạ em tự động chuyển sang xử lý task tiếp theo: ${nextTask.title}`;
       if (this.wsBroadcaster) {
         this.wsBroadcaster('auto_process_task_started', {
           taskId: nextTask.id,
