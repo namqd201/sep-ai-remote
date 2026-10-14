@@ -1,7 +1,10 @@
 import http from 'node:http';
 import { app } from './app.js';
 import { config } from './config.js';
+import { db } from './db/database.js';
 import { wsGateway } from './services/wsGateway.js';
+// Dọn dẹp task mồ côi từ phiên trước khi server backend khởi động
+db.cleanupOrphanedTasksOnStartup();
 const server = http.createServer(app);
 // Khởi động WebSocket Gateway
 wsGateway.init(server);

@@ -833,7 +833,20 @@
         <div class="chip" onclick="setFilter('RUNNING', this)">⚡ Đang chạy</div>
         <div class="chip" onclick="setFilter('COMPLETED', this)">✅ Hoàn thành</div>
         <div class="chip" onclick="setFilter('WAITING_APPROVAL', this)">Chờ duyệt</div>
-        <div class="chip" onclick="setFilter('FAILED', this)">Thất bại</div>
+        <div class="chip" onclick="setFilter('FAILED', this)" id="chip-failed">❌ Thất bại <span id="failed-badge" style="display:none; background: #EF4444; color: #FFF; border-radius: 10px; padding: 1px 6px; font-size: 0.7rem; font-weight: 700; margin-left: 2px;">0</span></div>
+      </div>
+
+      <!-- Failed Control Bar (Hiển thị khi lọc FAILED) -->
+      <div id="failed-control-card" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; color: #EF4444;">❌ Danh sách task gặp lỗi</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="failed-count-desc">0 task bị fail</div>
+          </div>
+          <button class="btn" onclick="cleanAllFailedTasks()" style="width: auto; padding: 6px 12px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.5); font-weight: 600; border-radius: 8px; cursor: pointer;">
+            🧹 Dọn sạch tất cả task lỗi
+          </button>
+        </div>
       </div>
 
       <!-- Queue Control Bar (Hiển thị khi lọc QUEUE) -->
@@ -2333,6 +2346,22 @@
       qCountDesc.innerText = `${queueCount} task đang xếp hàng đợi làm`;
     }
 
+    const failedTasks = state.tasks.filter((t) => t.status === 'FAILED');
+    const failedCount = failedTasks.length;
+    const fBadge = document.getElementById('failed-badge');
+    if (fBadge) {
+      fBadge.innerText = failedCount;
+      fBadge.style.display = failedCount > 0 ? 'inline-block' : 'none';
+    }
+    const failedDesc = document.getElementById('failed-count-desc');
+    if (failedDesc) {
+      failedDesc.innerText = `${failedCount} task gặp sự cố / thất bại`;
+    }
+    const failedCard = document.getElementById('failed-control-card');
+    if (failedCard) {
+      failedCard.style.display = state.currentFilter === 'FAILED' ? 'block' : 'none';
+    }
+
     if (queueCard) {
       queueCard.style.display = state.currentFilter === 'QUEUE' ? 'block' : 'none';
     }
@@ -2343,13 +2372,14 @@
     } else if (state.currentFilter === 'QUEUE') {
       filtered = queueTasks;
     } else {
-      filtered = state.tasks.filter(t => t.status === state.currentFilter);
+      filtered = state.tasks.filter((t) => t.status === state.currentFilter);
     }
 
     const makeTaskHtml = (t) => {
       const isWaiting = t.status === 'PENDING' || t.status === 'QUEUED_OFFLINE';
       const isRunning = t.status === 'RUNNING';
-      let statusLabel = t.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (t.status === 'QUEUED_OFFLINE' ? '⏳ HÀNG ĐỢI OFFLINE' : (isRunning ? '⚡ ĐANG CHẠY' : t.status));
+      const isFailed = t.status === 'FAILED';
+      let statusLabel = t.status === 'PENDING' ? '⏳ ĐANG CHỜ' : (t.status === 'QUEUED_OFFLINE' ? '⏳ HÀNG ĐỢI OFFLINE' : (isRunning ? '⚡ ĐANG CHẠY' : (isFailed ? '❌ THẤT BẠI' : t.status)));
       let pillClass = `pill-${t.status}`;
       if (t.needsConfirmation) {
         statusLabel = '💡 CẦN XÁC NHẬN';
@@ -2392,7 +2422,16 @@
                 🗑️ Xóa
               </button>
             </div>
-          ` : ''}
+          ` : (isFailed ? `
+            <div style="display: flex; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--surface-light);" onclick="event.stopPropagation()">
+              <button onclick="retryTaskById('${t.id}')" style="flex: 1; background: #D97706; color: white; border: none; padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                🔄 Chạy lại
+              </button>
+              <button onclick="deleteTaskById('${t.id}')" style="background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
+                🗑️ Xóa
+              </button>
+            </div>
+          ` : '')}
         </div>
       `;
     };
@@ -2693,7 +2732,16 @@
               🗑️ Xóa khỏi DS chờ
             </button>
           </div>
-        ` : ''}
+        ` : (task.status === 'FAILED' ? `
+          <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button class="btn" onclick="closeDetailModal(); retryTaskById('${task.id}')" style="flex: 1; background: #D97706; color: white; padding: 10px; font-size: 0.9rem; font-weight: 600;">
+              🔄 Đưa vào hàng đợi làm lại
+            </button>
+            <button class="btn" onclick="closeDetailModal(); deleteTaskById('${task.id}')" style="flex: 1; background: rgba(239,68,68,0.2); color: #EF4444; border: 1px solid rgba(239,68,68,0.4); padding: 10px; font-size: 0.9rem;">
+              🗑️ Xóa task lỗi này
+            </button>
+          </div>
+        ` : '')}
       </div>
       ${liveBoxHtml}
       <hr style="border: none; border-top: 1px solid var(--surface-light); margin: 14px 0;">
@@ -3012,7 +3060,7 @@
   }
 
   async function deleteTaskById(taskId) {
-    if (!confirm('Sếp có chắc chắn muốn xóa task này khỏi danh sách chờ không ạ?')) return;
+    if (!confirm('Sếp có chắc chắn muốn xóa task này không ạ?')) return;
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
@@ -3020,7 +3068,42 @@
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showVoiceToast('Đã xóa', 'Đã xóa task khỏi danh sách chờ', false);
+        showVoiceToast('Đã xóa', 'Đã xóa task thành công', false);
+        fetchTasks();
+      }
+    } catch (e) {
+      showVoiceToast('Lỗi', e.message, true);
+    }
+  }
+
+  async function retryTaskById(taskId) {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/retry`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showVoiceToast('⚡ ĐÃ ĐƯA VÀO HÀNG ĐỢI', 'Đã đưa task trở lại danh sách chờ để làm tiếp', false);
+        fetchTasks();
+      } else {
+        showVoiceToast('Lỗi', data.message || 'Không thể chạy lại task', true);
+      }
+    } catch (e) {
+      showVoiceToast('Lỗi', e.message, true);
+    }
+  }
+
+  async function cleanAllFailedTasks() {
+    if (!confirm('Sếp có chắc chắn muốn dọn dẹp sạch toàn bộ các task bị lỗi không ạ?')) return;
+    try {
+      const res = await fetch('/api/tasks/clean-failed', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showVoiceToast('Đã dọn dẹp', `Đã dọn dẹp sạch ${data.count} task bị lỗi`, false);
         fetchTasks();
       }
     } catch (e) {

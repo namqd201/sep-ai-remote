@@ -58,6 +58,22 @@ router.delete('/:id', allowLocalOrAuth, (req, res) => {
   res.json({ success: true, message: 'Đã xóa task khỏi danh sách chờ' });
 });
 
+// 5.1. Thử lại / Chạy lại một task (Retry / Re-queue)
+router.post('/:id/retry', allowLocalOrAuth, (req, res) => {
+  const result = taskService.retryTask(req.params.id);
+  if (!result.success) {
+    res.status(400).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+// 5.2. Dọn dẹp tất cả task bị lỗi (Clean Failed Tasks)
+router.post('/clean-failed', allowLocalOrAuth, (req, res) => {
+  const result = taskService.cleanFailedTasks();
+  res.json(result);
+});
+
 // 6. Tạo task mới (Hỗ trợ cờ isQueued để thêm vào danh sách chờ)
 router.post('/', allowLocalOrAuth, (req: Request, res: Response) => {
   const body = req.body as CreateTaskDto;

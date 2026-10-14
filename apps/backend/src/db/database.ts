@@ -15,7 +15,6 @@ export class AppDatabase {
 
     this.db = new DatabaseSync(path.resolve(config.databaseFile));
     this.initTables();
-    this.cleanupOrphanedTasksOnStartup();
   }
 
   private initTables(): void {

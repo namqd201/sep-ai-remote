@@ -414,6 +414,45 @@ export class TaskService {
         }
         return ok;
     }
+    retryTask(taskId) {
+        const task = db.getTask(taskId);
+        if (!task) {
+            return { success: false, message: 'Task không tồn tại' };
+        }
+        const now = getVietnamNowIso();
+        task.status = TaskStatus.PENDING;
+        task.retryCount = (task.retryCount || 0) + 1;
+        task.updatedAt = now;
+        task.completedAt = undefined;
+        task.currentActionText = 'Đang chờ xử lý lại...';
+        task.report = undefined;
+        task.needsConfirmation = false;
+        db.saveTask(task);
+        if (this.wsBroadcaster) {
+            this.wsBroadcaster('task_updated', task);
+        }
+        // Nếu chế độ tự động xử lý đang bật và PC online, kích hoạt ngay nếu worker rảnh
+        if (this.isAutoProcessEnabled() && this.isPcOnline) {
+            setTimeout(() => {
+                this.triggerNextInQueueIfIdle();
+            }, 500);
+        }
+        return { success: true, task, message: 'Đã đưa task trở lại danh sách chờ thành công.' };
+    }
+    cleanFailedTasks() {
+        const allTasks = db.listTasks(undefined, 200);
+        const failedTasks = allTasks.filter((t) => t.status === TaskStatus.FAILED);
+        let count = 0;
+        for (const t of failedTasks) {
+            if (db.deleteTask(t.id)) {
+                count++;
+                if (this.wsBroadcaster) {
+                    this.wsBroadcaster('task_deleted', { id: t.id });
+                }
+            }
+        }
+        return { success: true, count };
+    }
     async respondToProposal(taskId, action, feedbackText) {
         const task = db.getTask(taskId);
         if (!task) {

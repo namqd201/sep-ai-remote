@@ -12,7 +12,6 @@ export class AppDatabase {
         }
         this.db = new DatabaseSync(path.resolve(config.databaseFile));
         this.initTables();
-        this.cleanupOrphanedTasksOnStartup();
     }
     initTables() {
         this.db.exec(`
