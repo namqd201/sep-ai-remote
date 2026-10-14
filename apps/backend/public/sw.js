@@ -1,10 +1,12 @@
 // Service Worker for Sếp AI Remote PWA
-const CACHE_NAME = 'sep-ai-remote-v4';
+const CACHE_NAME = 'sep-ai-remote-v5';
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/app-avatar.png',
+  '/favicon.png'
 ];
 
 self.addEventListener('install', (event) => {

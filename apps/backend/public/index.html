@@ -7,7 +7,9 @@
   
   <!-- PWA Meta Tags & Shortcut Icons -->
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Nhân viên quèn">
@@ -694,7 +696,7 @@
   <!-- PWA SHORTCUT BANNER -->
   <div id="pwa-install-banner" class="pwa-banner" onclick="handlePwaInstallClick()">
     <div style="display: flex; align-items: center; gap: 8px;">
-      <span>📱</span>
+      <img src="/app-avatar.png" alt="App" style="width: 24px; height: 24px; border-radius: 6px; object-fit: cover;">
       <span><b>Cài đặt ứng dụng Nhân viên quèn</b></span>
     </div>
     <div style="display: flex; align-items: center; gap: 6px;">
@@ -706,7 +708,7 @@
   <header>
     <div class="header-left">
       <button class="drawer-btn" onclick="toggleDrawer()">☰</button>
-      <h1><span>🙇‍♂️</span> Nhân viên quèn</h1>
+      <h1><img src="/app-avatar.png" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent); vertical-align: middle; margin-right: 6px; box-shadow: 0 0 8px rgba(37,99,235,0.4);"> Nhân viên quèn</h1>
     </div>
     <div id="ws-badge" style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; color: var(--text-muted);">
       <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning); display: inline-block;"></span>
@@ -719,7 +721,7 @@
   <aside id="antigravity-drawer" class="antigravity-drawer">
     <div class="drawer-header">
       <div class="drawer-logo">
-        <div class="drawer-logo-icon">A</div>
+        <img src="/app-avatar.png" alt="Logo" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent); margin-right: 8px;">
         <span>Antigravity Sessions</span>
       </div>
       <button onclick="toggleDrawer()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
@@ -794,11 +796,14 @@
       </div>
 
       <div class="hero-banner">
-        <div>
+        <div style="flex: 1; min-width: 0;">
           <h2>Sếp muốn giao việc gì?</h2>
           <p>Nói bằng tiếng Việt hoặc gõ yêu cầu cho Antigravity.</p>
         </div>
-        <button class="big-mic-btn" onclick="openVoiceModal()">🎙️</button>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="/app-avatar.png" alt="Nhân viên quèn" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.35); box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+          <button class="big-mic-btn" onclick="openVoiceModal()">🎙️</button>
+        </div>
       </div>
 
       <!-- BANNER HÀNG ĐỢI / DANH SÁCH CHỜ CỦA SẾP -->
@@ -892,7 +897,7 @@
 
       <div id="chat-messages" class="chat-messages">
         <div class="bubble agent">
-          <div class="bubble-role">AGENT ANTIGRAVITY</div>
+          <div class="bubble-role" style="display: flex; align-items: center; gap: 6px;"><img src="/app-avatar.png" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover;"> NHÂN VIÊN QUÈN</div>
           Chào Sếp! Em đang giữ nguyên lịch sử hội thoại và workspace của phiên làm việc. Sếp cần em hỗ trợ gì thêm ạ?
           <div>
             <button class="voice-play-btn" onclick="playVietnameseAudio('Chào Sếp! Em đang giữ nguyên lịch sử hội thoại và workspace của phiên làm việc. Sếp cần em hỗ trợ gì thêm ạ?')">
@@ -916,6 +921,20 @@
 
     <!-- TAB 4: SETTINGS -->
     <div id="tab-settings" class="tab-pane">
+      <!-- THÔNG TIN ỨNG DỤNG & AVATAR NHÂN VIÊN QUÈN -->
+      <div class="card" style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px; background: linear-gradient(135deg, rgba(37,99,235,0.18) 0%, rgba(30,41,59,0.9) 100%); border: 1.5px solid rgba(59,130,246,0.35); box-shadow: 0 4px 16px rgba(0,0,0,0.25);">
+        <img src="/app-avatar.png" alt="Nhân viên quèn" style="width: 58px; height: 58px; border-radius: 14px; object-fit: cover; border: 2px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC; display: flex; align-items: center; gap: 6px;">
+            <span>Nhân viên quèn</span>
+            <span class="badge" style="background: rgba(37,99,235,0.3); color: #60A5FA; font-size: 0.68rem; padding: 2px 6px;">AI Assistant</span>
+          </div>
+          <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 3px; line-height: 1.35;">
+            Trợ lý AI mẫn cán phục vụ Sếp Nam 24/7
+          </div>
+        </div>
+      </div>
+
       <!-- 0. TỰ ĐỘNG XỬ LÝ TASK LIÊN TỤC (AUTO-PROCESS QUEUE) -->
       <div class="card" style="border: 1.5px solid rgba(16, 185, 129, 0.45); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.12); margin-bottom: 14px; background: rgba(16, 185, 129, 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -1504,7 +1523,11 @@
         navigator.mediaSession.metadata = new MediaMetadata({
           title: 'Nhân viên quèn (Đang trực ngầm)',
           artist: 'Antigravity AI Assistant',
-          album: 'Sẵn sàng phát tiếng khi xong task'
+          album: 'Sẵn sàng phát tiếng khi xong task',
+          artwork: [
+            { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+          ]
         });
         navigator.mediaSession.playbackState = 'playing';
 
@@ -1637,7 +1660,11 @@
           navigator.mediaSession.metadata = new MediaMetadata({
             title: '📢 Đang đọc báo cáo task',
             artist: 'Nhân viên quèn',
-            album: text.substring(0, 45)
+            album: text.substring(0, 45),
+            artwork: [
+              { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+              { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+            ]
           });
           navigator.mediaSession.playbackState = 'playing';
         }
@@ -1656,7 +1683,11 @@
           navigator.mediaSession.metadata = new MediaMetadata({
             title: 'Nhân viên quèn (Đang trực ngầm)',
             artist: 'Antigravity AI Assistant',
-            album: 'Sẵn sàng phát tiếng khi xong task'
+            album: 'Sẵn sàng phát tiếng khi xong task',
+            artwork: [
+              { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+              { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+            ]
           });
           navigator.mediaSession.playbackState = 'playing';
         }
@@ -3245,7 +3276,7 @@
         const isOffline = data.task && data.task.status === 'QUEUED_OFFLINE';
         chatCont.innerHTML += `
           <div class="bubble agent">
-            <div class="bubble-role">AGENT ANTIGRAVITY</div>
+            <div class="bubble-role" style="display: flex; align-items: center; gap: 6px;"><img src="/app-avatar.png" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover;"> NHÂN VIÊN QUÈN</div>
             ${isOffline 
               ? 'Dạ Sếp, máy tính đang offline. Lệnh của Sếp đã vào hàng đợi và sẽ chạy ngay khi máy tính online!' 
               : `Dạ Sếp, em đã tiếp nhận lệnh${attachmentsToSend.length > 0 ? ' kèm ảnh' : ''} và đang xử lý trên máy tính!`
