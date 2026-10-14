@@ -1,10 +1,13 @@
 // Service Worker for Sếp AI Remote PWA
-const CACHE_NAME = 'sep-ai-remote-v5';
+const CACHE_NAME = 'sep-ai-remote-v6';
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
+  '/manifest.json?v=3',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
   '/app-avatar.png',
   '/favicon.png'
 ];
