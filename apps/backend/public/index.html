@@ -770,6 +770,16 @@
         </div>
       </div>
 
+      <!-- Quick PC Remote Power Bar -->
+      <div id="pc-power-bar" style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <button class="btn" onclick="confirmLockPC()" style="flex: 1; padding: 8px 10px; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93C5FD; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>🔒</span> Khóa màn hình
+        </button>
+        <button class="btn" onclick="confirmSleepPC()" style="flex: 1; padding: 8px 10px; font-size: 0.8rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); color: #C4B5FD; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>💤</span> Cho PC đi ngủ
+        </button>
+      </div>
+
       <!-- Current Active Session Card -->
       <div class="card" style="padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7);">
         <div>
@@ -1051,7 +1061,36 @@
         </button>
       </div>
 
-      <!-- 4. Kết nối & Thiết bị -->
+      <!-- 4. Điều Khiển Máy Tính Từ Xa (Bảo mật đi công tác) -->
+      <div class="card" style="border: 1px solid rgba(139, 92, 246, 0.4); box-shadow: 0 4px 20px rgba(139, 92, 246, 0.12);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h4 style="font-size: 0.88rem; color: #C4B5FD; text-transform: uppercase; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <span>🖥️</span>
+            <span>Điều Khiển Máy Tính Từ Xa</span>
+          </h4>
+          <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #C4B5FD; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px;">
+            Đi công tác
+          </span>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;">
+          Khi đi xa hoặc công tác, Sếp có thể chủ động khóa màn hình hoặc đưa máy tính vào chế độ ngủ (Sleep) khi đã xử lý xong việc.
+        </p>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" onclick="confirmLockPC()" style="flex: 1; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #93C5FD; font-size: 0.82rem; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>🔒</span> Khóa màn hình PC
+          </button>
+          <button class="btn" onclick="confirmSleepPC()" style="flex: 1; background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); color: #C4B5FD; font-size: 0.82rem; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>💤</span> Cho PC đi ngủ
+          </button>
+        </div>
+        <div style="font-size: 0.72rem; color: #64748B; margin-top: 10px; line-height: 1.4;">
+          💡 <b>Khóa màn hình:</b> Người ngoài không xem được máy, nhưng Antigravity vẫn chạy ngầm bình thường.<br>
+          💡 <b>Đi ngủ (Sleep):</b> Máy tạm nghỉ tiết kiệm điện, kết nối từ xa sẽ tạm dừng cho đến khi được đánh thức.
+        </div>
+      </div>
+
+      <!-- 5. Kết nối & Thiết bị -->
       <div class="card">
         <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Kết nối & Thiết bị</h4>
         <div style="margin-bottom: 10px;">
@@ -2918,6 +2957,44 @@
   function saveSettings() {
     initAuth();
     alert('Đã lưu mã ghép đôi thành công!');
+  }
+
+  async function confirmLockPC() {
+    if (!confirm('Sếp có chắc chắn muốn khóa màn hình máy tính không?\n(Antigravity và Backend vẫn tiếp tục chạy ngầm bình thường).')) return;
+    try {
+      const res = await fetch('/api/pc/lock', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showVoiceToast('BẢO MẬT PC', 'Đã khóa màn hình máy tính thành công!');
+        playVietnameseAudio('Em đã khóa màn hình máy tính cho Sếp rồi ạ.');
+      } else {
+        alert('Lỗi: ' + data.error);
+      }
+    } catch (err) {
+      alert('Lỗi kết nối: ' + err.message);
+    }
+  }
+
+  async function confirmSleepPC() {
+    if (!confirm('Sếp có chắc chắn muốn cho máy tính đi ngủ (Sleep) không?\nLưu ý: Khi máy tính ngủ, kết nối từ xa sẽ tạm dừng cho đến khi máy được đánh thức trở lại.')) return;
+    try {
+      const res = await fetch('/api/pc/sleep', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showVoiceToast('CHẾ ĐỘ NGỦ', 'Máy tính đang chuẩn bị vào chế độ ngủ (Sleep)...');
+        playVietnameseAudio('Máy tính đang chuẩn bị vào chế độ ngủ rồi Sếp ạ.');
+      } else {
+        alert('Lỗi: ' + data.error);
+      }
+    } catch (err) {
+      alert('Lỗi kết nối: ' + err.message);
+    }
   }
 
   // Lắng nghe Service Worker click thông báo
