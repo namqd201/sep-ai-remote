@@ -119,7 +119,7 @@ export class AppDatabase {
         last_seen_at = excluded.last_seen_at,
         fcm_token = COALESCE(excluded.fcm_token, devices.fcm_token)
     `);
-        stmt.run(device.id, device.name, device.type, device.role, device.isOnline ? 1 : 0, device.lastSeenAt, device.registeredAt, device.fcmToken || null);
+        stmt.run(device.id, device.name, device.type || 'mobile', device.role, device.isOnline ? 1 : 0, device.lastSeenAt, device.registeredAt, device.fcmToken || null);
     }
     getDevice(id) {
         const stmt = this.db.prepare(`SELECT * FROM devices WHERE id = ?`);

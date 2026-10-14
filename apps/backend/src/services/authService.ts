@@ -22,13 +22,14 @@ export class AuthService {
     }
 
     const deviceId = `dev_${uuidv4().substring(0, 8)}`;
-    const role = req.deviceType === DeviceType.WINDOWS_BRIDGE ? UserRole.BRIDGE : UserRole.BOSS;
+    const deviceType = req.deviceType || DeviceType.MOBILE;
+    const role = deviceType === DeviceType.WINDOWS_BRIDGE ? UserRole.BRIDGE : UserRole.BOSS;
     const now = new Date().toISOString();
 
     db.upsertDevice({
       id: deviceId,
       name: req.deviceName || 'Thiết bị mới',
-      type: req.deviceType,
+      type: deviceType,
       role,
       isOnline: true,
       lastSeenAt: now,
@@ -38,7 +39,7 @@ export class AuthService {
     const payload: JwtPayload = {
       deviceId,
       deviceName: req.deviceName || 'Thiết bị mới',
-      deviceType: req.deviceType,
+      deviceType,
       role
     };
 

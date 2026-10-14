@@ -122,7 +122,7 @@ export class AppDatabase {
     stmt.run(
       device.id,
       device.name,
-      device.type,
+      device.type || 'mobile',
       device.role,
       device.isOnline ? 1 : 0,
       device.lastSeenAt,

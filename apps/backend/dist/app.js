@@ -11,8 +11,11 @@ import ttsRoutes from './routes/ttsRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+import proxyRoutes from './routes/proxyRoutes.js';
 export const app = express();
 app.use(cors({ origin: config.corsOrigin }));
+// Proxy cho phép stream trực tiếp
+app.use('/api/proxy', proxyRoutes);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // API Routes

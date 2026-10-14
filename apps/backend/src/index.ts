@@ -4,6 +4,8 @@ import { config } from './config.js';
 import { db } from './db/database.js';
 import { wsGateway } from './services/wsGateway.js';
 
+import { telegramService } from './services/telegramService.js';
+
 // Dọn dẹp task mồ côi từ phiên trước khi server backend khởi động
 db.cleanupOrphanedTasksOnStartup();
 
@@ -19,6 +21,9 @@ server.listen(config.port, config.host, () => {
   console.log(`⚡ WebSocket Server: ws://${config.host}:${config.port}/ws`);
   console.log(`🔑 Mã ghép đôi (Pairing Code): ${config.pairingCode}`);
   console.log(`====================================================`);
+
+  // Bắt đầu lắng nghe Telegram 2 chiều
+  telegramService.startPolling();
 });
 
 // Mở thêm cổng phụ 3000 nếu cổng chính khác 3000

@@ -148,6 +148,9 @@ export class TaskService {
             telegramService.sendVoiceNotification(voiceText, task.title).catch((err) => {
                 console.warn('[TaskService] Gửi voice Telegram thất bại:', err);
             });
+            telegramService.sendProposalApproval(task.id, task.title, proposalText || '').catch((err) => {
+                console.warn('[TaskService] Gửi proposal approval Telegram thất bại:', err);
+            });
             if (this.wsBroadcaster) {
                 this.wsBroadcaster('task_needs_confirmation', {
                     taskId: task.id,

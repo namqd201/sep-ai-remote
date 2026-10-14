@@ -856,14 +856,57 @@
         </div>
       </div>
 
-      <!-- Quick PC Remote Power Bar -->
-      <div id="pc-power-bar" style="display: flex; gap: 8px; margin-bottom: 14px;">
-        <button class="btn" onclick="confirmLockPC()" style="flex: 1; padding: 8px 10px; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93C5FD; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <!-- Quick PC Remote Actions Grid -->
+      <div id="pc-power-bar" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+        <button class="btn" onclick="confirmLockPC()" style="padding: 8px 10px; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93C5FD; display: flex; align-items: center; justify-content: center; gap: 6px;">
           <span>🔒</span> Khóa màn hình
         </button>
-        <button class="btn" onclick="confirmSleepPC()" style="flex: 1; padding: 8px 10px; font-size: 0.8rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); color: #C4B5FD; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <button class="btn" onclick="confirmSleepPC()" style="padding: 8px 10px; font-size: 0.8rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); color: #C4B5FD; display: flex; align-items: center; justify-content: center; gap: 6px;">
           <span>💤</span> Cho PC đi ngủ
         </button>
+        <button class="btn" onclick="openScreenshotModal()" style="padding: 8px 10px; font-size: 0.8rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #6EE7B7; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>📸</span> Chụp màn hình
+        </button>
+        <button class="btn" onclick="openWebPreviewModal()" style="padding: 8px 10px; font-size: 0.8rem; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #FCD34D; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>🌐</span> Xem trước Web
+        </button>
+      </div>
+
+      <!-- PC Health Mini Dashboard -->
+      <div id="pc-health-card" class="card" style="padding: 10px 14px; margin-bottom: 14px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.25);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="font-size: 0.76rem; font-weight: 600; color: #38BDF8; display: flex; align-items: center; gap: 6px;">
+            <span class="live-dot-pulse" style="width: 7px; height: 7px; background: #38BDF8;"></span>
+            <span>SỨC KHỎE PC TỪ XA</span>
+          </div>
+          <div id="health-uptime" style="font-size: 0.72rem; color: var(--text-muted);">
+            ⏱️ Đang tải...
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div style="background: rgba(30, 41, 59, 0.6); padding: 6px 10px; border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #94A3B8;">
+              <span>⚡ CPU</span>
+              <span id="health-cpu-val" style="font-weight: 600; color: #F1F5F9;">--%</span>
+            </div>
+            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 4px; overflow: hidden;">
+              <div id="health-cpu-bar" style="width: 0%; height: 100%; background: #38BDF8; transition: width 0.3s;"></div>
+            </div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.6); padding: 6px 10px; border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #94A3B8;">
+              <span>💾 RAM</span>
+              <span id="health-ram-val" style="font-weight: 600; color: #F1F5F9;">--%</span>
+            </div>
+            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 4px; overflow: hidden;">
+              <div id="health-ram-bar" style="width: 0%; height: 100%; background: #A78BFA; transition: width 0.3s;"></div>
+            </div>
+          </div>
+        </div>
+        <div id="health-extra" style="font-size: 0.7rem; color: #64748B; margin-top: 6px; display: flex; justify-content: space-between;">
+          <span id="health-disk-val">💽 Ổ đĩa: --</span>
+          <span id="health-host-val">💻 Host: --</span>
+        </div>
       </div>
 
       <!-- Current Active Session Card -->
@@ -1204,6 +1247,24 @@
           💡 <b>Khóa màn hình:</b> Người ngoài không xem được máy, nhưng Antigravity vẫn chạy ngầm bình thường.<br>
           💡 <b>Đi ngủ (Sleep):</b> Máy tạm nghỉ tiết kiệm điện, kết nối từ xa sẽ tạm dừng cho đến khi được đánh thức.
         </div>
+
+        <!-- Tự khởi động cùng Windows -->
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 0.82rem; font-weight: 600; color: #F1F5F9; display: flex; align-items: center; gap: 6px;">
+              <span>🚀</span> Tự khởi động ngầm cùng Windows
+            </div>
+            <span id="autostart-status-badge" class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34D399; font-size: 0.7rem;">
+              Đang kiểm tra...
+            </span>
+          </div>
+          <p style="font-size: 0.74rem; color: #94A3B8; margin-bottom: 8px; line-height: 1.4;">
+            Cứ khi nào máy tính bật nguồn hoặc khởi động lại, dịch vụ Backend và Ngrok sẽ tự động chạy ngầm 100% ẩn danh, không hiện cửa sổ cmd.
+          </p>
+          <button id="btn-toggle-autostart" class="btn" onclick="toggleAutostart()" style="width: 100%; font-size: 0.8rem; padding: 8px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38BDF8;">
+            ⚙️ Cài đặt Tự khởi động cùng Windows
+          </button>
+        </div>
       </div>
 
       <!-- 5. Kết nối & Thiết bị -->
@@ -1320,6 +1381,77 @@
         <button onclick="closeDetailModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
       </div>
       <div id="detail-content"></div>
+    </div>
+  <!-- MODAL CHỤP MÀN HÌNH PC -->
+  <div id="screenshot-modal" class="modal-overlay" onclick="if(event.target===this) closeScreenshotModal()">
+    <div class="modal-sheet" style="max-height: 88vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+          <span>📸</span> Màn hình PC từ xa
+        </h3>
+        <button onclick="closeScreenshotModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <div id="screenshot-container" style="position: relative; background: #000; border-radius: 8px; overflow: hidden; min-height: 200px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border);">
+        <img id="screenshot-img" src="/uploads/pc_screen.png" style="width: 100%; height: auto; display: block; border-radius: 8px;" alt="PC Screenshot" onerror="this.src='/app-avatar.png';">
+        <div id="screenshot-loading" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; color: #fff; font-size: 0.85rem; gap: 8px;">
+          <span class="live-dot-pulse"></span> Đang chụp ảnh màn hình mới...
+        </div>
+      </div>
+      <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 8px;" id="screenshot-timestamp">
+        Cập nhật: Vừa xong
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button class="btn" style="flex: 1; background: var(--primary);" onclick="refreshScreenshot()">
+          🔄 Chụp lại ngay
+        </button>
+        <button class="btn" style="flex: 1; background: var(--surface-light); color: var(--text);" onclick="window.open(document.getElementById('screenshot-img').src, '_blank')">
+          🔍 Mở ảnh gốc
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL XEM TRƯỚC SẢN PHẨM WEB -->
+  <div id="web-preview-modal" class="modal-overlay" onclick="if(event.target===this) closeWebPreviewModal()">
+    <div class="modal-sheet" style="max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+          <span>🌐</span> Xem trước Sản phẩm Web từ xa
+        </h3>
+        <button onclick="closeWebPreviewModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;">
+        Sếp có thể mở và tương tác trực tiếp với giao diện web đang chạy ở bất kỳ cổng local nào trên máy tính ở nhà.
+      </p>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <div style="flex: 1;">
+          <label style="font-size: 0.75rem; color: var(--text-muted);">Cổng dịch vụ (Port):</label>
+          <input type="number" id="preview-port-input" class="input-field" value="5173" style="padding: 8px 10px; font-size: 0.9rem;" placeholder="Ví dụ: 5173, 3000, 8080">
+        </div>
+        <button class="btn" style="align-self: flex-end; padding: 8px 14px; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); color: #38BDF8;" onclick="checkPreviewPort()">
+          🔍 Kiểm tra
+        </button>
+      </div>
+
+      <!-- Quick Port Pills -->
+      <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+        <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.72rem; background: var(--surface-light);" onclick="setPreviewPort(5173)">Vite (5173)</button>
+        <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.72rem; background: var(--surface-light);" onclick="setPreviewPort(3001)">React/Next (3001)</button>
+        <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.72rem; background: var(--surface-light);" onclick="setPreviewPort(8080)">Vue/Java (8080)</button>
+        <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.72rem; background: var(--surface-light);" onclick="setPreviewPort(8501)">Streamlit (8501)</button>
+      </div>
+
+      <div id="preview-status-box" style="font-size: 0.76rem; padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,0.04); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="preview-status-text">Nhập cổng và bấm Kiểm tra...</span>
+        <button id="preview-open-tab-btn" class="btn" style="display: none; padding: 4px 10px; font-size: 0.72rem; background: var(--primary);" onclick="openPreviewInNewTab()">
+          🚀 Mở toàn màn hình
+        </button>
+      </div>
+
+      <div id="preview-frame-container" style="display: none; width: 100%; height: 380px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #fff;">
+        <iframe id="preview-iframe" style="width: 100%; height: 100%; border: none;"></iframe>
+      </div>
     </div>
   </div>
 </div>
@@ -3603,6 +3735,191 @@
     }
   }
 
+  // 1. Giám sát sức khỏe PC từ xa
+  async function fetchPcHealth() {
+    try {
+      const res = await fetch('/api/pc/health', {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.success || !json.data) return;
+      const d = json.data;
+
+      // CPU
+      const cpuVal = document.getElementById('health-cpu-val');
+      const cpuBar = document.getElementById('health-cpu-bar');
+      if (cpuVal && cpuBar) {
+        cpuVal.innerText = `${d.cpu.percent}%`;
+        cpuBar.style.width = `${Math.min(100, d.cpu.percent)}%`;
+        cpuBar.style.background = d.cpu.percent > 85 ? '#EF4444' : (d.cpu.percent > 65 ? '#F59E0B' : '#38BDF8');
+      }
+
+      // RAM
+      const ramVal = document.getElementById('health-ram-val');
+      const ramBar = document.getElementById('health-ram-bar');
+      if (ramVal && ramBar) {
+        ramVal.innerText = `${d.memory.usedGb}/${d.memory.totalGb} GB (${d.memory.percent}%)`;
+        ramBar.style.width = `${Math.min(100, d.memory.percent)}%`;
+        ramBar.style.background = d.memory.percent > 85 ? '#EF4444' : '#A78BFA';
+      }
+
+      // Uptime & Extras
+      const uptimeEl = document.getElementById('health-uptime');
+      if (uptimeEl) uptimeEl.innerText = `⏱️ ${d.uptime.formatted}`;
+
+      const diskEl = document.getElementById('health-disk-val');
+      if (diskEl && d.disks && d.disks.length > 0) {
+        diskEl.innerText = `💽 ` + d.disks.map(x => `${x.drive} trống ${x.freeGb}G`).join(' | ');
+      }
+
+      const hostEl = document.getElementById('health-host-val');
+      if (hostEl) hostEl.innerText = `💻 ${d.platform.hostname}`;
+    } catch (_) {}
+  }
+
+  // 2. Chụp ảnh màn hình PC từ xa
+  function openScreenshotModal() {
+    document.getElementById('screenshot-modal').classList.add('open');
+    refreshScreenshot();
+  }
+
+  function closeScreenshotModal() {
+    document.getElementById('screenshot-modal').classList.remove('open');
+  }
+
+  async function refreshScreenshot() {
+    const loadingEl = document.getElementById('screenshot-loading');
+    const imgEl = document.getElementById('screenshot-img');
+    const timeEl = document.getElementById('screenshot-timestamp');
+    if (loadingEl) loadingEl.style.display = 'flex';
+
+    try {
+      const res = await fetch('/api/pc/screenshot', {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        if (imgEl) imgEl.src = `${data.url}&_rnd=${Date.now()}`;
+        if (timeEl) timeEl.innerText = `Cập nhật lúc: ${new Date().toLocaleTimeString('vi-VN')}`;
+      } else {
+        alert('Lỗi chụp ảnh: ' + (data.error || 'Không xác định'));
+      }
+    } catch (err) {
+      alert('Lỗi kết nối khi chụp màn hình: ' + err.message);
+    } finally {
+      if (loadingEl) loadingEl.style.display = 'none';
+    }
+  }
+
+  // 3. Xem trước sản phẩm Web từ xa
+  function openWebPreviewModal() {
+    document.getElementById('web-preview-modal').classList.add('open');
+  }
+
+  function closeWebPreviewModal() {
+    document.getElementById('web-preview-modal').classList.remove('open');
+  }
+
+  function setPreviewPort(port) {
+    const input = document.getElementById('preview-port-input');
+    if (input) {
+      input.value = port;
+      checkPreviewPort();
+    }
+  }
+
+  async function checkPreviewPort() {
+    const port = parseInt(document.getElementById('preview-port-input').value, 10);
+    const statusText = document.getElementById('preview-status-text');
+    const openTabBtn = document.getElementById('preview-open-tab-btn');
+    const frameContainer = document.getElementById('preview-frame-container');
+    const iframe = document.getElementById('preview-iframe');
+
+    if (!port || port < 1 || port > 65535) {
+      alert('Vui lòng nhập số cổng hợp lệ (1 - 65535)');
+      return;
+    }
+
+    if (statusText) statusText.innerHTML = `⏳ Đang kiểm tra cổng ${port}...`;
+
+    try {
+      const res = await fetch(`/api/proxy/check/${port}`);
+      const data = await res.json();
+
+      if (data.active) {
+        if (statusText) statusText.innerHTML = `🟢 <span style="color: #34D399; font-weight: 600;">Cổng ${port} đang hoạt động!</span> (HTTP ${data.statusCode || 200})`;
+        if (openTabBtn) openTabBtn.style.display = 'inline-block';
+        if (frameContainer && iframe) {
+          frameContainer.style.display = 'block';
+          iframe.src = `/api/proxy/${port}/`;
+        }
+      } else {
+        if (statusText) statusText.innerHTML = `⚪ <span style="color: #94A3B8;">Cổng ${port} chưa có dịch vụ nào đang chạy.</span>`;
+        if (openTabBtn) openTabBtn.style.display = 'none';
+        if (frameContainer) frameContainer.style.display = 'none';
+      }
+    } catch (err) {
+      if (statusText) statusText.innerHTML = `❌ Lỗi kiểm tra cổng: ${err.message}`;
+    }
+  }
+
+  function openPreviewInNewTab() {
+    const port = parseInt(document.getElementById('preview-port-input').value, 10);
+    if (port) {
+      window.open(`/api/proxy/${port}/`, '_blank');
+    }
+  }
+
+  // 4. Quản lý Tự khởi động cùng Windows
+  async function loadAutostartStatus() {
+    try {
+      const res = await fetch('/api/pc/autostart', {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      const badge = document.getElementById('autostart-status-badge');
+      const btn = document.getElementById('btn-toggle-autostart');
+      if (badge && btn) {
+        if (data.isInstalled) {
+          badge.style.background = 'rgba(16, 185, 129, 0.2)';
+          badge.style.color = '#34D399';
+          badge.innerText = '✅ Đang bật';
+          btn.style.background = 'rgba(239, 68, 68, 0.15)';
+          btn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+          btn.style.color = '#FCA5A5';
+          btn.innerText = '🛑 Tắt tự khởi động cùng Windows';
+        } else {
+          badge.style.background = 'rgba(148, 163, 184, 0.2)';
+          badge.style.color = '#94A3B8';
+          badge.innerText = '⚪ Đang tắt';
+          btn.style.background = 'rgba(56, 189, 248, 0.15)';
+          btn.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+          btn.style.color = '#38BDF8';
+          btn.innerText = '🚀 Bật tự khởi động ngầm cùng Windows';
+        }
+      }
+    } catch (_) {}
+  }
+
+  async function toggleAutostart() {
+    try {
+      const res = await fetch('/api/pc/autostart/toggle', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        loadAutostartStatus();
+      } else {
+        alert('Lỗi: ' + data.error);
+      }
+    } catch (err) {
+      alert('Lỗi kết nối: ' + err.message);
+    }
+  }
+
   // Lắng nghe Service Worker click thông báo
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
@@ -3625,6 +3942,11 @@
   window.addEventListener('load', () => {
     updatePwaBannerVisibility();
     initAuth();
+
+    // Khởi động giám sát sức khỏe PC định kỳ 15s
+    fetchPcHealth();
+    setInterval(fetchPcHealth, 15000);
+    loadAutostartStatus();
 
     // Khôi phục trạng thái trực ngầm nếu trước đó đã bật
     if (localStorage.getItem('sep_ai_bg_audio') === 'true') {
