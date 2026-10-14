@@ -2562,6 +2562,22 @@
 
     const isRunning = task.status === 'RUNNING';
     const isWaiting = task.status === 'PENDING' || task.status === 'QUEUED_OFFLINE';
+    const isFailed = task.status === 'FAILED';
+
+    let pillClass = `pill-${task.status}`;
+    let statusText = task.status === 'PENDING'
+      ? '⏳ ĐANG CHỜ'
+      : (task.status === 'QUEUED_OFFLINE'
+        ? '⏳ HÀNG ĐỢI OFFLINE'
+        : (isRunning
+          ? '⚡ ĐANG CHẠY'
+          : (isFailed
+            ? '❌ THẤT BẠI'
+            : (task.status === 'COMPLETED' ? '✅ HOÀN THÀNH' : task.status))));
+    if (task.needsConfirmation) {
+      statusText = '💡 CẦN XÁC NHẬN';
+      pillClass = 'pill-WAITING_APPROVAL';
+    }
 
     // Live Execution Stream Box
     let elapsedSeconds = 0;
