@@ -1,20 +1,11 @@
 import { db } from '../db/database.js';
+import { ttsService } from './ttsService.js';
 export class TelegramService {
     /**
-     * Lấy buffer âm thanh tiếng Việt từ Google Translate TTS
+     * Lấy buffer âm thanh tiếng Việt từ TtsService (theo giọng Sếp đã chọn)
      */
     async getTtsBuffer(text) {
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.trim())}&tl=vi&client=tw-ob`;
-        const res = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            }
-        });
-        if (!res.ok) {
-            throw new Error(`TTS failed with status ${res.status}`);
-        }
-        const arrayBuf = await res.arrayBuffer();
-        return Buffer.from(arrayBuf);
+        return ttsService.synthesize(text);
     }
     /**
      * Gửi tin nhắn thoại qua Telegram Bot tới Sếp Nam

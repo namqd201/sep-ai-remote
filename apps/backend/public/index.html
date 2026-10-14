@@ -905,6 +905,44 @@
           <input type="checkbox" id="tts-auto-toggle" checked style="width: 20px; height: 20px; accent-color: var(--primary);">
         </div>
 
+        <!-- 🎙️ CHỌN GIỌNG ĐỌC THÔNG BÁO AI (ĐA GIỌNG VIỆT NAM) -->
+        <div style="margin-bottom: 16px; background: rgba(37, 99, 235, 0.08); border: 1.5px solid rgba(37, 99, 235, 0.35); border-radius: 12px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-size: 0.92rem; font-weight: 700; color: #93C5FD; display: flex; align-items: center; gap: 6px;">
+              <span>🎙️</span> Giọng Đọc Thông Báo AI
+            </div>
+            <span class="badge" style="background: rgba(37,99,235,0.3); color: #60A5FA; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px;">Đa giọng Việt</span>
+          </div>
+          <div style="font-size: 0.78rem; color: #94A3B8; margin-bottom: 12px; line-height: 1.45;">
+            Chọn giọng đọc AI Sếp thích nhất. Áp dụng đồng bộ cho cả <b>Web App</b> và <b>Tin nhắn thoại Telegram</b>!
+          </div>
+
+          <div style="margin-bottom: 10px;">
+            <label style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600;">Danh sách giọng đọc:</label>
+            <select id="setting-voice-select" class="input-field" onchange="onVoiceSelected(this.value)" style="margin-top: 4px; padding: 10px; font-size: 0.88rem; background: var(--bg); color: var(--text); border: 1px solid var(--surface-light); border-radius: 8px; width: 100%;">
+              <option value="hoa_my_neural">Hoài My (Nữ Bắc) — Giọng truyền cảm [Neural AI]</option>
+              <option value="nam_minh_neural">Nam Minh (Nam Bắc) — Giọng trầm ấm [Neural AI]</option>
+              <option value="hoa_my_fast">Hoài My Nhanh (Nữ Bắc) — Năng động, dứt khoát</option>
+              <option value="hoa_my_gentle">Hoài My Dịu Dàng (Nữ) — Nhẹ nhàng, ấm áp</option>
+              <option value="nam_minh_deep">Nam Minh Trầm Khàn (Nam) — Vững chãi, chuyên nghiệp</option>
+              <option value="google_female">Chị Google — Giọng đọc truyền thống</option>
+            </select>
+          </div>
+
+          <div id="voice-desc-box" style="font-size: 0.8rem; color: #CBD5E1; background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid var(--accent); line-height: 1.4;">
+            Giọng nữ AI truyền cảm, ngọt ngào, chuẩn phát thanh viên.
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn" onclick="previewCurrentVoice()" style="flex: 1; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); color: #67E8F9; font-size: 0.84rem; padding: 9px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              ▶️ Nghe thử giọng
+            </button>
+            <button class="btn" onclick="saveVoiceSelection()" style="flex: 1; background: var(--primary); color: white; font-size: 0.84rem; padding: 9px; font-weight: 600;">
+              💾 Lưu giọng này
+            </button>
+          </div>
+        </div>
+
         <!-- Chế độ Trực âm thanh Chạy ngầm -->
         <div style="margin-bottom: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px;">
           <div style="font-size: 0.9rem; font-weight: 600; color: #F1F5F9; display: flex; align-items: center; gap: 6px;">
@@ -1689,6 +1727,10 @@
       tabId === 'dashboard' ? 'tổng quan' : tabId === 'tasks' ? 'công việc' : tabId === 'chat' ? 'hội thoại' : 'cài đặt'
     ));
     if (btn) btn.classList.add('active');
+    if (tabId === 'settings') {
+      loadVoiceSettings();
+      fetchSettings();
+    }
   }
 
   function openVoiceModal() {
@@ -1862,6 +1904,7 @@
   // 4b. CÀI ĐẶT & TELEGRAM VOICE BOT
   async function fetchSettings() {
     try {
+      loadVoiceSettings();
       const res = await fetch('/api/settings', { headers: { 'Authorization': `Bearer ${state.token}` } });
       const data = await res.json();
       if (data.success && data.settings) {
@@ -1880,6 +1923,78 @@
     } catch (e) {
       console.warn('Lỗi fetchSettings:', e);
     }
+  }
+
+  // 4c. CÀI ĐẶT GIỌNG ĐỌC AI TIẾNG VIỆT
+  let availableVoiceList = [];
+
+  async function loadVoiceSettings() {
+    try {
+      const res = await fetch('/api/tts/voices');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.voices)) {
+        availableVoiceList = data.voices;
+        const select = document.getElementById('setting-voice-select');
+        if (select) {
+          select.innerHTML = data.voices.map(v => `
+            <option value="${v.id}" ${v.id === data.selectedVoiceId ? 'selected' : ''}>
+              ${v.name} (${v.accent} • ${v.badge})
+            </option>
+          `).join('');
+        }
+        updateVoiceDesc(data.selectedVoiceId);
+      }
+    } catch (err) {
+      console.warn('[VoiceSettings] Lỗi tải danh sách giọng đọc:', err);
+    }
+  }
+
+  function updateVoiceDesc(voiceId) {
+    const descBox = document.getElementById('voice-desc-box');
+    if (!descBox) return;
+    const v = availableVoiceList.find(x => x.id === voiceId);
+    if (v) {
+      descBox.innerHTML = `<strong>${v.name}</strong> (${v.accent} • ${v.badge}): ${v.description}`;
+    }
+  }
+
+  function onVoiceSelected(voiceId) {
+    updateVoiceDesc(voiceId);
+  }
+
+  async function saveVoiceSelection() {
+    const select = document.getElementById('setting-voice-select');
+    if (!select) return;
+    const voiceId = select.value;
+    try {
+      const res = await fetch('/api/tts/voices/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showVoiceToast('CÀI ĐẶT GIỌNG ĐỌC', 'Đã lưu giọng đọc thông báo mới thành công!');
+        previewCurrentVoice();
+      } else {
+        alert('Lỗi: ' + (data.error || 'Không lưu được'));
+      }
+    } catch (e) {
+      alert('Lỗi lưu cài đặt giọng đọc: ' + e.message);
+    }
+  }
+
+  function previewCurrentVoice() {
+    const select = document.getElementById('setting-voice-select');
+    const voiceId = select ? select.value : '';
+    const v = availableVoiceList.find(x => x.id === voiceId);
+    const sampleText = v
+      ? `Dạ em chào Sếp Nam! Em là ${v.name}, từ nay em sẽ thay mặt Nhân viên quèn báo cáo công việc cho Sếp ạ.`
+      : 'Dạ em chào Sếp Nam! Đây là giọng đọc thông báo mẫu của Nhân viên quèn ạ.';
+    const audioUrl = `/api/tts?text=${encodeURIComponent(sampleText)}&voice=${voiceId}&_t=${Date.now()}`;
+    const audio = new Audio(audioUrl);
+    audio.play().catch(err => console.warn('[PreviewAudio] Autoplay blocked:', err));
+    showVoiceToast('NGHE THỬ GIỌNG ĐỌC', sampleText);
   }
 
   async function saveTelegramSettings() {
