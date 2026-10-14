@@ -772,6 +772,45 @@
       color: #58A6FF;
       font-weight: 600;
     }
+
+    /* File extension badges & Diff line stats (giống giao diện Antigravity) */
+    .file-ext-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      letter-spacing: 0.4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      line-height: 1.2;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .badge-ts { background: #1E3A8A; color: #60A5FA; border: 1px solid rgba(96, 165, 250, 0.3); }
+    .badge-js { background: #422006; color: #FACC15; border: 1px solid rgba(250, 204, 21, 0.3); }
+    .badge-html { background: #431407; color: #FB923C; border: 1px solid rgba(251, 146, 60, 0.3); font-weight: 800; }
+    .badge-css { background: #172554; color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-py { background: #1E293B; color: #FDE047; border: 1px solid rgba(253, 224, 71, 0.3); }
+    .badge-json { background: #292524; color: #FBBF24; border: 1px solid rgba(251, 191, 36, 0.3); }
+    .badge-md { background: #1E293B; color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.3); }
+    .badge-default { background: #1E293B; color: #CBD5E1; border: 1px solid rgba(203, 213, 225, 0.2); }
+
+    .diff-stat-add {
+      color: #34D399; /* Xanh lá hàng thêm */
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82rem;
+      margin-left: 6px;
+    }
+    .diff-stat-del {
+      color: #F87171; /* Đỏ hàng bớt */
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82rem;
+      margin-left: 3px;
+    }
   </style>
 </head>
 <body>
@@ -2751,6 +2790,51 @@
     });
   }
 
+  function getFileBadge(filename) {
+    if (!filename) return '';
+    const ext = filename.split('.').pop().toLowerCase();
+    if (ext === 'ts' || ext === 'tsx') {
+      return `<span class="file-ext-badge badge-ts">TS</span>`;
+    }
+    if (ext === 'js' || ext === 'jsx' || ext === 'mjs' || ext === 'cjs') {
+      return `<span class="file-ext-badge badge-js">JS</span>`;
+    }
+    if (ext === 'html' || ext === 'htm') {
+      return `<span class="file-ext-badge badge-html">&lt;/&gt;</span>`;
+    }
+    if (ext === 'css' || ext === 'scss' || ext === 'less') {
+      return `<span class="file-ext-badge badge-css">CSS</span>`;
+    }
+    if (ext === 'py') {
+      return `<span class="file-ext-badge badge-py">PY</span>`;
+    }
+    if (ext === 'json') {
+      return `<span class="file-ext-badge badge-json">JSON</span>`;
+    }
+    if (ext === 'md') {
+      return `<span class="file-ext-badge badge-md">MD</span>`;
+    }
+    return `<span class="file-ext-badge badge-default">${escapeHtml(ext.toUpperCase().substring(0, 4))}</span>`;
+  }
+
+  function getDiffLineCounts(diffText, targetContent, replacementContent) {
+    let added = 0;
+    let removed = 0;
+    if (diffText) {
+      const lines = diffText.split('\n');
+      for (const l of lines) {
+        if (l.startsWith('+++') || l.startsWith('---') || l.startsWith('@@')) continue;
+        if (l.startsWith('+')) added++;
+        else if (l.startsWith('-')) removed++;
+      }
+    }
+    if (added === 0 && removed === 0) {
+      if (replacementContent) added = replacementContent.split('\n').filter(Boolean).length || 1;
+      if (targetContent) removed = targetContent.split('\n').filter(Boolean).length || 1;
+    }
+    return { added, removed };
+  }
+
   function renderStepHtml(step) {
     let icon = '⚙️';
     let typeClass = '';
@@ -2759,11 +2843,73 @@
     if (step.type === 'file_read') {
       icon = '📖';
       typeClass = 'file-read';
-      detailHtml = step.detail ? `<div class="step-detail code-badge">${escapeHtml(step.detail)}</div>` : '';
+      const fileName = step.filePath ? step.filePath.split(/[/\\]/).pop() : (step.detail || 'file');
+      return `
+        <div class="live-step-item ${typeClass}">
+          <span class="step-icon">${icon}</span>
+          <div class="step-body">
+            <div class="step-title" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+              <span style="color: #94A3B8; font-weight: 500;">Analyzed</span>
+              ${getFileBadge(fileName)}
+              <span style="font-family: ui-monospace, SFMono-Regular, monospace; font-weight: 600; color: #F1F5F9;">${escapeHtml(fileName)}</span>
+              ${step.lineRange ? `<span style="color: #64748B; font-size: 0.75rem; font-family: ui-monospace, monospace; margin-left: 2px;">#${escapeHtml(step.lineRange)}</span>` : ''}
+            </div>
+            ${step.instruction ? `<div style="font-size: 0.74rem; color: #CBD5E1; margin-top: 3px;">💡 ${escapeHtml(step.instruction)}</div>` : ''}
+          </div>
+          <span class="step-arrow">&gt;</span>
+        </div>
+      `;
     } else if (step.type === 'file_edit') {
       icon = '✏️';
       typeClass = 'file-edit';
-      detailHtml = step.detail ? `<div class="step-detail code-badge">${escapeHtml(step.detail)}</div>` : '';
+      const fileName = step.filePath ? step.filePath.split(/[/\\]/).pop() : (step.detail || 'file');
+      const counts = getDiffLineCounts(step.fileDiff, step.targetContent, step.replacementContent);
+      const added = step.addedLines != null ? step.addedLines : counts.added;
+      const removed = step.removedLines != null ? step.removedLines : counts.removed;
+
+      let instructionHtml = '';
+      if (step.instruction) {
+        instructionHtml = `<div style="font-size: 0.74rem; color: #CBD5E1; margin-top: 3px;">💡 ${escapeHtml(step.instruction)}</div>`;
+      }
+
+      let diffHtml = '';
+      const diffContent = step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : '');
+      if (diffContent) {
+        const diffId = 'diff_' + (step.id || Math.random().toString(36).substring(2, 9));
+        diffHtml = `
+          <div class="step-diff-wrapper">
+            <button type="button" id="${diffId}-btn" class="btn-diff-toggle" onclick="event.stopPropagation(); toggleStepDiff('${diffId}')">
+              🔍 Xem nội dung đã sửa
+            </button>
+            <div id="${diffId}" class="diff-box" style="display: none;" onclick="event.stopPropagation()">
+              <div class="diff-header">
+                <span style="font-weight: 500; color: #7DD3FC; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">📄 ${escapeHtml(step.filePath || step.detail || 'File diff')}</span>
+                <button type="button" class="diff-copy-btn" onclick="copyDiffText('${diffId}')" title="Sao chép diff">📋 Copy</button>
+              </div>
+              <textarea id="${diffId}-raw" style="display: none;">${escapeHtml(diffContent)}</textarea>
+              <pre class="diff-content">${formatDiffLines(diffContent)}</pre>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="live-step-item ${typeClass}">
+          <span class="step-icon">${icon}</span>
+          <div class="step-body">
+            <div class="step-title" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+              <span style="color: #94A3B8; font-weight: 500;">Edited</span>
+              ${getFileBadge(fileName)}
+              <span style="font-family: ui-monospace, SFMono-Regular, monospace; font-weight: 600; color: #F1F5F9;">${escapeHtml(fileName)}</span>
+              <span class="diff-stat-add">+${added}</span>
+              <span class="diff-stat-del">-${removed}</span>
+            </div>
+            ${instructionHtml}
+            ${diffHtml}
+          </div>
+          <span class="step-arrow">&gt;</span>
+        </div>
+      `;
     } else if (step.type === 'command') {
       icon = '💻';
       typeClass = 'command';
@@ -2781,27 +2927,6 @@
       instructionHtml = `<div style="font-size: 0.74rem; color: #CBD5E1; margin-top: 3px;">💡 ${escapeHtml(step.instruction)}</div>`;
     }
 
-    let diffHtml = '';
-    const diffContent = step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : '');
-    if (step.type === 'file_edit' && diffContent) {
-      const diffId = 'diff_' + (step.id || Math.random().toString(36).substring(2, 9));
-      diffHtml = `
-        <div class="step-diff-wrapper">
-          <button type="button" id="${diffId}-btn" class="btn-diff-toggle" onclick="event.stopPropagation(); toggleStepDiff('${diffId}')">
-            🔍 Xem nội dung đã sửa
-          </button>
-          <div id="${diffId}" class="diff-box" style="display: none;" onclick="event.stopPropagation()">
-            <div class="diff-header">
-              <span style="font-weight: 500; color: #7DD3FC; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">📄 ${escapeHtml(step.filePath || step.detail || 'File diff')}</span>
-              <button type="button" class="diff-copy-btn" onclick="copyDiffText('${diffId}')" title="Sao chép diff">📋 Copy</button>
-            </div>
-            <textarea id="${diffId}-raw" style="display: none;">${escapeHtml(diffContent)}</textarea>
-            <pre class="diff-content">${formatDiffLines(diffContent)}</pre>
-          </div>
-        </div>
-      `;
-    }
-
     return `
       <div class="live-step-item ${typeClass}">
         <span class="step-icon">${icon}</span>
@@ -2809,7 +2934,6 @@
           <div class="step-title">${escapeHtml(step.title)}</div>
           ${instructionHtml}
           ${detailHtml}
-          ${diffHtml}
         </div>
         <span class="step-arrow">&gt;</span>
       </div>
@@ -2859,7 +2983,9 @@
               fileName: step.filePath.split(/[/\\]/).pop(),
               instruction: step.instruction,
               lineRange: step.lineRange,
-              diff: step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : undefined)
+              diff: step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : undefined),
+              addedLines: step.addedLines,
+              removedLines: step.removedLines
             });
           }
         }
@@ -2870,15 +2996,25 @@
       const fc = fileChangesMap.get(f) || { filePath: f, fileName: f.split(/[/\\]/).pop() };
       const diffContent = fc.diff;
       const diffId = `rep_diff_${(task.id || 't').replace(/[^a-zA-Z0-9_-]/g, '_')}_${idx}`;
+      const counts = getDiffLineCounts(diffContent);
+      const added = fc.addedLines != null ? fc.addedLines : counts.added;
+      const removed = fc.removedLines != null ? fc.removedLines : counts.removed;
+      const fileName = fc.fileName || f.split(/[/\\]/).pop();
 
       return `
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <div style="min-width: 0; flex: 1;">
-              <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; font-weight: 600; color: #93C5FD; word-break: break-all;">
-                📄 ${escapeHtml(fc.fileName || f)}
+              <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                <span style="color: #94A3B8; font-weight: 500; font-size: 0.8rem;">Edited</span>
+                ${getFileBadge(fileName)}
+                <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.84rem; font-weight: 600; color: #F1F5F9; word-break: break-all;">
+                  ${escapeHtml(fileName)}
+                </span>
+                <span class="diff-stat-add">+${added}</span>
+                <span class="diff-stat-del">-${removed}</span>
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; word-break: break-all;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; word-break: break-all;">
                 ${escapeHtml(f)}
               </div>
               ${fc.instruction ? `<div style="font-size: 0.75rem; color: #CBD5E1; margin-top: 4px;">💡 ${escapeHtml(fc.instruction)}</div>` : ''}

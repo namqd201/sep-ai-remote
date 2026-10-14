@@ -359,6 +359,35 @@ export class AntigravityAdapter implements IAntigravityAdapter {
     return undefined;
   }
 
+  private countDiffLines(
+    diffText?: string,
+    targetContent?: string,
+    replacementContent?: string
+  ): { added: number; removed: number } {
+    let added = 0;
+    let removed = 0;
+
+    if (diffText) {
+      const diffLines = diffText.split('\n');
+      for (const l of diffLines) {
+        if (l.startsWith('+++') || l.startsWith('---') || l.startsWith('@@')) continue;
+        if (l.startsWith('+')) added++;
+        else if (l.startsWith('-')) removed++;
+      }
+    }
+
+    if (added === 0 && removed === 0) {
+      if (targetContent) {
+        removed = targetContent.split('\n').filter(Boolean).length || 1;
+      }
+      if (replacementContent) {
+        added = replacementContent.split('\n').filter(Boolean).length || 1;
+      }
+    }
+
+    return { added, removed };
+  }
+
   public async getTaskReport(sessionId: string): Promise<TaskReport> {
     const now = new Date().toISOString();
     let summary = 'Task đã kết thúc.';
@@ -420,12 +449,20 @@ export class AntigravityAdapter implements IAntigravityAdapter {
                     diff = preview.split('\n').map((l: string) => '+' + l).join('\n');
                   }
 
+                  const counts = this.countDiffLines(
+                    diff,
+                    args.TargetContent,
+                    args.ReplacementContent || args.CodeContent
+                  );
+
                   fileChanges.push({
                     filePath: target,
                     fileName,
                     instruction: instruction || undefined,
                     lineRange,
-                    diff
+                    diff,
+                    addedLines: counts.added,
+                    removedLines: counts.removed
                   });
                 }
               }
@@ -572,6 +609,8 @@ export class AntigravityAdapter implements IAntigravityAdapter {
             let targetContent: string | undefined;
             let replacementContent: string | undefined;
             let lineRange: string | undefined;
+            let addedLines: number | undefined;
+            let removedLines: number | undefined;
 
             if (toolName === 'view_file') {
               type = 'file_read';
@@ -588,6 +627,9 @@ export class AntigravityAdapter implements IAntigravityAdapter {
               replacementContent = args.ReplacementContent;
               lineRange = args.StartLine ? `L${args.StartLine}-${args.EndLine || args.StartLine}` : '';
               fileDiff = this.extractDiffFromSteps(parsedSteps, i, targetContent, replacementContent);
+              const counts = this.countDiffLines(fileDiff, targetContent, replacementContent);
+              addedLines = counts.added;
+              removedLines = counts.removed;
               const info = [lineRange, instruction].filter(Boolean).join(' • ');
               detail = info ? `${fileName} (${info})` : fileName;
             } else if (toolName === 'write_to_file') {
@@ -602,6 +644,9 @@ export class AntigravityAdapter implements IAntigravityAdapter {
                   : args.CodeContent;
                 fileDiff = preview.split('\n').map((l: string) => '+' + l).join('\n');
               }
+              const counts = this.countDiffLines(fileDiff, undefined, replacementContent);
+              addedLines = counts.added;
+              removedLines = counts.removed;
               detail = instruction ? `${fileName} (${instruction})` : fileName;
             } else if (toolName === 'run_command') {
               type = 'command';
@@ -623,7 +668,9 @@ export class AntigravityAdapter implements IAntigravityAdapter {
               instruction,
               targetContent,
               replacementContent,
-              lineRange
+              lineRange,
+              addedLines,
+              removedLines
             });
             currentActionText = title;
           }

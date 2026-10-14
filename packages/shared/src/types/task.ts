@@ -23,6 +23,8 @@ export interface TaskFileChange {
   instruction?: string;
   lineRange?: string;
   diff?: string;
+  addedLines?: number;
+  removedLines?: number;
 }
 
 export interface TaskReport {
@@ -49,6 +51,8 @@ export interface TaskLiveStep {
   targetContent?: string;
   replacementContent?: string;
   lineRange?: string;
+  addedLines?: number;
+  removedLines?: number;
 }
 
 export interface Task {
