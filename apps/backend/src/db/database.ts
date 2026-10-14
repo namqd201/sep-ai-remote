@@ -194,18 +194,21 @@ export class AppDatabase {
   }
 
   public cleanupOrphanedTasksOnStartup(): void {
-    const stmt = this.db.prepare(`
-      UPDATE tasks 
-      SET status = 'FAILED', 
-          updated_at = ?,
-          current_action = 'Đã hủy do server khởi động lại'
-      WHERE status IN ('RUNNING', 'DISPATCHED')
-    `);
-    const now = getVietnamNowIso();
-    const result = stmt.run(now);
-    if (result.changes > 0) {
-      console.log(`[Database] Đã giải phóng ${result.changes} task bị treo từ phiên trước khi khởi động.`);
+    // Chỉ dọn dẹp các task bị kẹt quá 30 phút không phản hồi, KHÔNG tự ý hủy task đang chạy dở của Sếp khi khởi động lại
+    this.cleanupStaleRunningTasks(30);
+  }
+
+  public getLatestTaskForSession(sessionId?: string): Task | null {
+    if (sessionId) {
+      const stmt = this.db.prepare(`
+        SELECT * FROM tasks 
+        WHERE session_id = ?
+        ORDER BY updated_at DESC, created_at DESC LIMIT 1
+      `);
+      const row = stmt.get(sessionId) as Record<string, unknown> | undefined;
+      if (row) return this.mapTask(row);
     }
+    return null;
   }
 
   public cleanupStaleRunningTasks(maxAgeMinutes = 20): number {

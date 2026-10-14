@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { authService } from './authService.js';
 import { taskService } from './taskService.js';
 import { notificationService } from './notificationService.js';
+import { db } from '../db/database.js';
 import {
   WsEventType,
   WsMessage,
@@ -213,9 +214,11 @@ export class WsGateway {
           const taskEvent = message.payload as TaskEvent;
           let targetTaskId = taskEvent.taskId;
 
-          // Nếu TaskEvent chỉ có sessionId (từ Stop Hook hoặc Polling Observer), tự động map về Task đang RUNNING
+          // Nếu TaskEvent chỉ có sessionId (từ Stop Hook hoặc Polling Observer), tự động map về Task đang RUNNING hoặc task gần nhất của session
           if (!targetTaskId) {
-            const activeTask = taskService.getActiveTaskForSession(taskEvent.sessionId);
+            const activeTask =
+              taskService.getActiveTaskForSession(taskEvent.sessionId) ||
+              db.getLatestTaskForSession(taskEvent.sessionId);
             if (activeTask) {
               targetTaskId = activeTask.id;
               console.log(
@@ -223,7 +226,7 @@ export class WsGateway {
               );
             } else {
               console.warn(
-                `[WsGateway] Nhận taskEvent từ session ${taskEvent.sessionId} nhưng không có task nào đang chạy!`
+                `[WsGateway] Nhận taskEvent từ session ${taskEvent.sessionId} nhưng không tìm thấy task liên kết!`
               );
             }
           }
