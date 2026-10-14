@@ -688,6 +688,90 @@
     .live-box-collapsed #live-box-chevron {
       transform: rotate(-90deg);
     }
+
+    /* Code Diff Viewer Styles */
+    .step-diff-wrapper {
+      margin-top: 6px;
+      width: 100%;
+    }
+    .btn-diff-toggle {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38BDF8;
+      border-radius: 6px;
+      padding: 4px 9px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+    .btn-diff-toggle:active {
+      transform: scale(0.97);
+      background: rgba(56, 189, 248, 0.25);
+    }
+    .diff-box {
+      margin-top: 6px;
+      background: #0D1117;
+      border: 1px solid #30363D;
+      border-radius: 6px;
+      overflow: hidden;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .diff-header {
+      background: #161B22;
+      border-bottom: 1px solid #30363D;
+      padding: 5px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #8B949E;
+      font-size: 10.5px;
+    }
+    .diff-copy-btn {
+      background: none;
+      border: none;
+      color: #8B949E;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.15s ease;
+    }
+    .diff-copy-btn:hover {
+      color: #C9D1D9;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .diff-content {
+      padding: 6px 8px;
+      max-height: 250px;
+      overflow: auto;
+      margin: 0;
+      white-space: pre;
+      color: #C9D1D9;
+    }
+    .diff-line {
+      display: block;
+      padding: 0 4px;
+      border-radius: 2px;
+    }
+    .diff-line.add {
+      background: rgba(46, 160, 67, 0.18);
+      color: #3FB950;
+    }
+    .diff-line.del {
+      background: rgba(248, 81, 73, 0.18);
+      color: #F85149;
+    }
+    .diff-line.hunk {
+      background: rgba(56, 139, 253, 0.12);
+      color: #58A6FF;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -2488,6 +2572,53 @@
     }
   }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function formatDiffLines(diffText) {
+    if (!diffText) return '';
+    const lines = diffText.split('\n');
+    return lines.map(line => {
+      const escaped = escapeHtml(line);
+      if (line.startsWith('+') && !line.startsWith('+++')) {
+        return `<span class="diff-line add">${escaped}</span>`;
+      } else if (line.startsWith('-') && !line.startsWith('---')) {
+        return `<span class="diff-line del">${escaped}</span>`;
+      } else if (line.startsWith('@@')) {
+        return `<span class="diff-line hunk">${escaped}</span>`;
+      }
+      return `<span class="diff-line">${escaped}</span>`;
+    }).join('');
+  }
+
+  function toggleStepDiff(diffId) {
+    const el = document.getElementById(diffId);
+    const btn = document.getElementById(diffId + '-btn');
+    if (!el) return;
+    const isHidden = el.style.display === 'none';
+    el.style.display = isHidden ? 'block' : 'none';
+    if (btn) {
+      btn.innerHTML = isHidden ? '▲ Thu gọn diff' : '🔍 Xem nội dung đã sửa';
+    }
+  }
+
+  function copyDiffText(diffId) {
+    const el = document.getElementById(diffId + '-raw');
+    if (!el) return;
+    navigator.clipboard.writeText(el.value).then(() => {
+      alert('Đã sao chép diff vào clipboard!');
+    }).catch(() => {
+      alert('Không thể sao chép.');
+    });
+  }
+
   function renderStepHtml(step) {
     let icon = '⚙️';
     let typeClass = '';
@@ -2496,29 +2627,57 @@
     if (step.type === 'file_read') {
       icon = '📖';
       typeClass = 'file-read';
-      detailHtml = step.detail ? `<div class="step-detail code-badge">${step.detail}</div>` : '';
+      detailHtml = step.detail ? `<div class="step-detail code-badge">${escapeHtml(step.detail)}</div>` : '';
     } else if (step.type === 'file_edit') {
       icon = '✏️';
       typeClass = 'file-edit';
-      detailHtml = step.detail ? `<div class="step-detail code-badge">${step.detail}</div>` : '';
+      detailHtml = step.detail ? `<div class="step-detail code-badge">${escapeHtml(step.detail)}</div>` : '';
     } else if (step.type === 'command') {
       icon = '💻';
       typeClass = 'command';
-      detailHtml = step.detail ? `<div class="step-detail code-badge">${step.detail}</div>` : '';
+      detailHtml = step.detail ? `<div class="step-detail code-badge">${escapeHtml(step.detail)}</div>` : '';
     } else if (step.type === 'active' || step.type === 'tool_call') {
       icon = '<span class="live-dot-pulse"></span>';
       typeClass = 'working-step';
-      detailHtml = step.detail ? `<div class="step-detail">${step.detail}</div>` : '';
+      detailHtml = step.detail ? `<div class="step-detail">${escapeHtml(step.detail)}</div>` : '';
     } else {
-      detailHtml = step.detail ? `<div class="step-detail">${step.detail}</div>` : '';
+      detailHtml = step.detail ? `<div class="step-detail">${escapeHtml(step.detail)}</div>` : '';
+    }
+
+    let instructionHtml = '';
+    if (step.instruction) {
+      instructionHtml = `<div style="font-size: 0.74rem; color: #CBD5E1; margin-top: 3px;">💡 ${escapeHtml(step.instruction)}</div>`;
+    }
+
+    let diffHtml = '';
+    const diffContent = step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : '');
+    if (step.type === 'file_edit' && diffContent) {
+      const diffId = 'diff_' + (step.id || Math.random().toString(36).substring(2, 9));
+      diffHtml = `
+        <div class="step-diff-wrapper">
+          <button type="button" id="${diffId}-btn" class="btn-diff-toggle" onclick="event.stopPropagation(); toggleStepDiff('${diffId}')">
+            🔍 Xem nội dung đã sửa
+          </button>
+          <div id="${diffId}" class="diff-box" style="display: none;" onclick="event.stopPropagation()">
+            <div class="diff-header">
+              <span style="font-weight: 500; color: #7DD3FC; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">📄 ${escapeHtml(step.filePath || step.detail || 'File diff')}</span>
+              <button type="button" class="diff-copy-btn" onclick="copyDiffText('${diffId}')" title="Sao chép diff">📋 Copy</button>
+            </div>
+            <textarea id="${diffId}-raw" style="display: none;">${escapeHtml(diffContent)}</textarea>
+            <pre class="diff-content">${formatDiffLines(diffContent)}</pre>
+          </div>
+        </div>
+      `;
     }
 
     return `
       <div class="live-step-item ${typeClass}">
         <span class="step-icon">${icon}</span>
         <div class="step-body">
-          <div class="step-title">${step.title}</div>
+          <div class="step-title">${escapeHtml(step.title)}</div>
+          ${instructionHtml}
           ${detailHtml}
+          ${diffHtml}
         </div>
         <span class="step-arrow">&gt;</span>
       </div>
@@ -2545,6 +2704,84 @@
         textEl.innerText = task.currentActionText ? `⚡ ${task.currentActionText}` : '⚡ Antigravity đang thực thi...';
       }
     }
+  }
+
+  function renderReportFileChanges(task) {
+    if (!task || !task.report || !task.report.filesModified || task.report.filesModified.length === 0) return '';
+
+    const fileChangesMap = new Map();
+    if (task.report.fileChanges && Array.isArray(task.report.fileChanges)) {
+      for (const fc of task.report.fileChanges) {
+        if (fc.filePath) {
+          fileChangesMap.set(fc.filePath, fc);
+        }
+      }
+    }
+
+    if (task.liveSteps && Array.isArray(task.liveSteps)) {
+      for (const step of task.liveSteps) {
+        if (step.type === 'file_edit' && step.filePath) {
+          if (!fileChangesMap.has(step.filePath)) {
+            fileChangesMap.set(step.filePath, {
+              filePath: step.filePath,
+              fileName: step.filePath.split(/[/\\]/).pop(),
+              instruction: step.instruction,
+              lineRange: step.lineRange,
+              diff: step.fileDiff || (step.replacementContent ? step.replacementContent.split('\n').map(l => '+' + l).join('\n') : undefined)
+            });
+          }
+        }
+      }
+    }
+
+    const itemsHtml = task.report.filesModified.map((f, idx) => {
+      const fc = fileChangesMap.get(f) || { filePath: f, fileName: f.split(/[/\\]/).pop() };
+      const diffContent = fc.diff;
+      const diffId = `rep_diff_${(task.id || 't').replace(/[^a-zA-Z0-9_-]/g, '_')}_${idx}`;
+
+      return `
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <div style="min-width: 0; flex: 1;">
+              <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; font-weight: 600; color: #93C5FD; word-break: break-all;">
+                📄 ${escapeHtml(fc.fileName || f)}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; word-break: break-all;">
+                ${escapeHtml(f)}
+              </div>
+              ${fc.instruction ? `<div style="font-size: 0.75rem; color: #CBD5E1; margin-top: 4px;">💡 ${escapeHtml(fc.instruction)}</div>` : ''}
+              ${fc.lineRange ? `<div style="font-size: 0.72rem; color: #38BDF8; margin-top: 2px;">📍 ${escapeHtml(fc.lineRange)}</div>` : ''}
+            </div>
+            ${diffContent ? `
+              <button type="button" id="${diffId}-btn" class="btn-diff-toggle" onclick="event.stopPropagation(); toggleStepDiff('${diffId}')" style="flex-shrink: 0;">
+                🔍 Xem nội dung đã sửa
+              </button>
+            ` : ''}
+          </div>
+          ${diffContent ? `
+            <div id="${diffId}" class="diff-box" style="display: none; margin-top: 8px;" onclick="event.stopPropagation()">
+              <div class="diff-header">
+                <span>📄 Chi tiết thay đổi</span>
+                <button type="button" class="diff-copy-btn" onclick="copyDiffText('${diffId}')">📋 Copy</button>
+              </div>
+              <textarea id="${diffId}-raw" style="display: none;">${escapeHtml(diffContent)}</textarea>
+              <pre class="diff-content">${formatDiffLines(diffContent)}</pre>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 6px;">
+          FILES ĐÃ SỬA (${task.report.filesModified.length}):
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
   }
 
   function openDetailModal(taskId) {
@@ -2629,14 +2866,7 @@
           <div style="font-size: 0.75rem; color: var(--text-muted);">TÓM TẮT:</div>
           <div style="font-size: 0.9rem; margin-top: 2px;">${task.report.summary}</div>
         </div>
-        ${task.report.filesModified && task.report.filesModified.length ? `
-          <div style="margin-bottom: 12px;">
-            <div style="font-size: 0.75rem; color: var(--text-muted);">FILES ĐÃ SỬA:</div>
-            <div style="font-family: monospace; font-size: 0.8rem; color: #93C5FD; margin-top: 4px;">
-              ${task.report.filesModified.map(f => `<div>📄 ${f}</div>`).join('')}
-            </div>
-          </div>
-        ` : ''}
+        ${renderReportFileChanges(task)}
         ${task.report.testResults ? `
           <div style="margin-bottom: 12px;">
             <div style="font-size: 0.75rem; color: var(--text-muted);">KẾT QUẢ KIỂM THỬ:</div>

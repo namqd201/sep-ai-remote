@@ -17,9 +17,18 @@ export interface TaskAttachment {
   localPath?: string;  // Local file path on Windows PC
 }
 
+export interface TaskFileChange {
+  filePath: string;
+  fileName?: string;
+  instruction?: string;
+  lineRange?: string;
+  diff?: string;
+}
+
 export interface TaskReport {
   summary: string;
   filesModified: string[];
+  fileChanges?: TaskFileChange[];
   testResults?: string;
   errorDetails?: string;
   executionTimeMs?: number;
@@ -34,6 +43,12 @@ export interface TaskLiveStep {
   detail?: string;
   status: 'running' | 'done' | 'error';
   timestamp: string;
+  filePath?: string;
+  fileDiff?: string;
+  instruction?: string;
+  targetContent?: string;
+  replacementContent?: string;
+  lineRange?: string;
 }
 
 export interface Task {

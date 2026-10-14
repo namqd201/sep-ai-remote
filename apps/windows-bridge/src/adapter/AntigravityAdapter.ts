@@ -14,6 +14,7 @@ import {
   TaskStatus,
   TaskEvent,
   TaskLiveStep,
+  TaskFileChange,
   DEFAULT_TTS_COMPLETION_PHRASE,
   getVietnamNowIso,
   getTaskCompletionVoiceText
@@ -321,10 +322,48 @@ export class AntigravityAdapter implements IAntigravityAdapter {
     return TaskStatus.COMPLETED;
   }
 
+  private extractDiffFromSteps(
+    steps: any[],
+    currentIndex: number,
+    targetContent?: string,
+    replacementContent?: string
+  ): string | undefined {
+    // 1. Kiểm tra các bước kế tiếp xem có block diff thống nhất không
+    for (let j = currentIndex + 1; j < Math.min(currentIndex + 3, steps.length); j++) {
+      const nextContent = steps[j]?.content;
+      if (typeof nextContent === 'string' && nextContent.includes('[diff_block_start]')) {
+        const match = nextContent.match(/\[diff_block_start\]([\s\S]*?)\[diff_block_end\]/);
+        if (match && match[1]) {
+          return match[1].trim();
+        }
+      }
+    }
+
+    // 2. Dự phòng: Tái tạo diff từ targetContent và replacementContent
+    if (targetContent || replacementContent) {
+      const dels = targetContent
+        ? targetContent
+            .split('\n')
+            .map((l: string) => '-' + l)
+            .join('\n')
+        : '';
+      const adds = replacementContent
+        ? replacementContent
+            .split('\n')
+            .map((l: string) => '+' + l)
+            .join('\n')
+        : '';
+      return [dels, adds].filter(Boolean).join('\n');
+    }
+
+    return undefined;
+  }
+
   public async getTaskReport(sessionId: string): Promise<TaskReport> {
     const now = new Date().toISOString();
     let summary = 'Task đã kết thúc.';
     const filesModified: string[] = [];
+    const fileChanges: TaskFileChange[] = [];
     let testResults: string | undefined;
     let errorDetails: string | undefined;
 
@@ -342,29 +381,61 @@ export class AntigravityAdapter implements IAntigravityAdapter {
       try {
         const content = fs.readFileSync(transcriptPath, 'utf-8');
         const lines = content.trim().split('\n');
-        const recentLines = lines.slice(-25);
+        const recentLines = lines.slice(-60);
+        const parsedSteps: any[] = [];
 
         for (const line of recentLines) {
+          if (!line.trim()) continue;
           try {
-            const step = JSON.parse(line);
-            if (step.tool_calls && Array.isArray(step.tool_calls)) {
-              for (const call of step.tool_calls) {
-                if (call.name === 'write_to_file' || call.name === 'replace_file_content') {
-                  const target = call.args?.TargetFile;
-                  if (target && !filesModified.includes(target)) {
+            parsedSteps.push(JSON.parse(line));
+          } catch {
+            // ignore JSON parse line
+          }
+        }
+
+        for (let i = 0; i < parsedSteps.length; i++) {
+          const step = parsedSteps[i];
+          if (step.tool_calls && Array.isArray(step.tool_calls)) {
+            for (const call of step.tool_calls) {
+              const toolName = call.name;
+              const args = call.args || {};
+
+              if (toolName === 'replace_file_content' || toolName === 'write_to_file') {
+                const target = (args.TargetFile || '').replace(/^"|"$/g, '');
+                if (target) {
+                  if (!filesModified.includes(target)) {
                     filesModified.push(target);
                   }
+                  const fileName = path.basename(target);
+                  const instruction = (args.Instruction || args.Description || '').replace(/^"|"$/g, '');
+                  const lineRange = args.StartLine ? `L${args.StartLine}-${args.EndLine || args.StartLine}` : undefined;
+
+                  let diff: string | undefined;
+                  if (toolName === 'replace_file_content') {
+                    diff = this.extractDiffFromSteps(parsedSteps, i, args.TargetContent, args.ReplacementContent);
+                  } else if (toolName === 'write_to_file' && args.CodeContent) {
+                    const preview = args.CodeContent.length > 2000
+                      ? args.CodeContent.substring(0, 2000) + '\n... (nội dung dài đã rút gọn)'
+                      : args.CodeContent;
+                    diff = preview.split('\n').map((l: string) => '+' + l).join('\n');
+                  }
+
+                  fileChanges.push({
+                    filePath: target,
+                    fileName,
+                    instruction: instruction || undefined,
+                    lineRange,
+                    diff
+                  });
                 }
               }
             }
-            if (step.type === 'PLANNER_RESPONSE' && step.content) {
-              summary = step.content.substring(0, 300);
-            }
-            if (step.status === 'ERROR') {
-              errorDetails = step.content || 'Gặp lỗi trong quá trình thực thi tool.';
-            }
-          } catch {
-            // ignore JSON parse line
+          }
+          if (step.type === 'PLANNER_RESPONSE' && step.content) {
+            summary = step.content.substring(0, 300);
+          }
+          if (step.status === 'ERROR') {
+            errorDetails = step.content || 'Gặp lỗi trong quá trình thực thi tool.';
           }
         }
       } catch (err) {
@@ -394,6 +465,7 @@ export class AntigravityAdapter implements IAntigravityAdapter {
     return {
       summary,
       filesModified,
+      fileChanges: fileChanges.length > 0 ? fileChanges : undefined,
       testResults,
       errorDetails,
       voiceNotificationText,
@@ -466,58 +538,95 @@ export class AntigravityAdapter implements IAntigravityAdapter {
       const content = fs.readFileSync(transcriptPath, 'utf-8');
       const lines = content.trim().split('\n');
       const recentLines = lines.slice(-40);
+      const parsedSteps: any[] = [];
 
-      let stepCounter = 1;
       for (const line of recentLines) {
         if (!line.trim()) continue;
         try {
-          const step = JSON.parse(line);
-          const timestamp = step.created_at || new Date().toISOString();
-
-          if (step.tool_calls && Array.isArray(step.tool_calls)) {
-            for (const call of step.tool_calls) {
-              const toolName = call.name || 'tool';
-              const args = call.args || {};
-
-              let title = args.toolSummary || args.toolAction || toolName;
-              if (typeof title === 'string') {
-                title = title.replace(/^"|"$/g, '').trim();
-              }
-
-              let detail = '';
-              let type: TaskLiveStep['type'] = 'tool_call';
-
-              if (toolName === 'view_file') {
-                type = 'file_read';
-                const filePath = (args.AbsolutePath || '').replace(/^"|"$/g, '');
-                const fileName = path.basename(filePath);
-                const lineRange = args.StartLine ? `#L${args.StartLine}-${args.EndLine || args.StartLine}` : '';
-                detail = `${fileName} ${lineRange}`.trim();
-              } else if (toolName === 'replace_file_content' || toolName === 'write_to_file') {
-                type = 'file_edit';
-                const filePath = (args.TargetFile || '').replace(/^"|"$/g, '');
-                detail = path.basename(filePath);
-              } else if (toolName === 'run_command') {
-                type = 'command';
-                const cmd = (args.CommandLine || '').replace(/^"|"$/g, '');
-                detail = cmd.length > 60 ? `${cmd.substring(0, 60)}...` : cmd;
-              } else {
-                detail = toolName;
-              }
-
-              liveSteps.push({
-                id: `step_${stepCounter++}`,
-                type,
-                title,
-                detail: detail || undefined,
-                status: 'done',
-                timestamp
-              });
-              currentActionText = title;
-            }
-          }
-        } catch (_) {
+          parsedSteps.push(JSON.parse(line));
+        } catch {
           // ignore invalid json line
+        }
+      }
+
+      let stepCounter = 1;
+      for (let i = 0; i < parsedSteps.length; i++) {
+        const step = parsedSteps[i];
+        const timestamp = step.created_at || new Date().toISOString();
+
+        if (step.tool_calls && Array.isArray(step.tool_calls)) {
+          for (const call of step.tool_calls) {
+            const toolName = call.name || 'tool';
+            const args = call.args || {};
+
+            let title = args.toolSummary || args.toolAction || toolName;
+            if (typeof title === 'string') {
+              title = title.replace(/^"|"$/g, '').trim();
+            }
+
+            let detail = '';
+            let type: TaskLiveStep['type'] = 'tool_call';
+            let filePath: string | undefined;
+            let fileDiff: string | undefined;
+            let instruction: string | undefined;
+            let targetContent: string | undefined;
+            let replacementContent: string | undefined;
+            let lineRange: string | undefined;
+
+            if (toolName === 'view_file') {
+              type = 'file_read';
+              filePath = (args.AbsolutePath || '').replace(/^"|"$/g, '');
+              const fileName = path.basename(filePath || '');
+              lineRange = args.StartLine ? `L${args.StartLine}-${args.EndLine || args.StartLine}` : '';
+              detail = `${fileName} ${lineRange ? '#' + lineRange : ''}`.trim();
+            } else if (toolName === 'replace_file_content') {
+              type = 'file_edit';
+              filePath = (args.TargetFile || '').replace(/^"|"$/g, '');
+              const fileName = path.basename(filePath || '');
+              instruction = (args.Instruction || args.Description || '').replace(/^"|"$/g, '');
+              targetContent = args.TargetContent;
+              replacementContent = args.ReplacementContent;
+              lineRange = args.StartLine ? `L${args.StartLine}-${args.EndLine || args.StartLine}` : '';
+              fileDiff = this.extractDiffFromSteps(parsedSteps, i, targetContent, replacementContent);
+              const info = [lineRange, instruction].filter(Boolean).join(' • ');
+              detail = info ? `${fileName} (${info})` : fileName;
+            } else if (toolName === 'write_to_file') {
+              type = 'file_edit';
+              filePath = (args.TargetFile || '').replace(/^"|"$/g, '');
+              const fileName = path.basename(filePath || '');
+              instruction = (args.Description || '').replace(/^"|"$/g, '');
+              replacementContent = args.CodeContent;
+              if (args.CodeContent) {
+                const preview = args.CodeContent.length > 2000
+                  ? args.CodeContent.substring(0, 2000) + '\n... (nội dung dài đã rút gọn)'
+                  : args.CodeContent;
+                fileDiff = preview.split('\n').map((l: string) => '+' + l).join('\n');
+              }
+              detail = instruction ? `${fileName} (${instruction})` : fileName;
+            } else if (toolName === 'run_command') {
+              type = 'command';
+              const cmd = (args.CommandLine || '').replace(/^"|"$/g, '');
+              detail = cmd.length > 60 ? `${cmd.substring(0, 60)}...` : cmd;
+            } else {
+              detail = toolName;
+            }
+
+            liveSteps.push({
+              id: `step_${stepCounter++}`,
+              type,
+              title,
+              detail: detail || undefined,
+              status: 'done',
+              timestamp,
+              filePath,
+              fileDiff,
+              instruction,
+              targetContent,
+              replacementContent,
+              lineRange
+            });
+            currentActionText = title;
+          }
         }
       }
 
