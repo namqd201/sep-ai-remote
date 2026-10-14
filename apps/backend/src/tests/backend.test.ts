@@ -21,6 +21,7 @@ describe('Sếp AI Remote Backend Test Suite', () => {
   });
 
   after(() => {
+    db.cleanupOrphanedTasksOnStartup();
     server.close();
   });
 

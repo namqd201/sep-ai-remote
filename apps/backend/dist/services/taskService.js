@@ -313,6 +313,14 @@ export class TaskService {
         if (task.status !== TaskStatus.PENDING && task.status !== TaskStatus.QUEUED_OFFLINE) {
             return { success: false, message: `Task đang ở trạng thái ${task.status}` };
         }
+        // Tự động tối ưu tiêu đề và câu voice thông minh nếu task cũ chưa có hoặc bị cắt cụt từ
+        if (!task.startVoiceText || !task.completionVoiceText || task.title.endsWith('...')) {
+            const summary = summarizeTaskPrompt(task.prompt);
+            task.title = summary.shortTitle;
+            task.currentActionText = summary.shortAction;
+            task.startVoiceText = summary.startVoiceText;
+            task.completionVoiceText = summary.doneVoiceText;
+        }
         if (!this.isPcOnline || !this.bridgeDispatcher) {
             task.status = TaskStatus.QUEUED_OFFLINE;
             task.updatedAt = getVietnamNowIso();
@@ -367,6 +375,8 @@ export class TaskService {
         if (!this.isAutoProcessEnabled()) {
             return { success: false, message: 'Chế độ tự động xử lý task đang tắt.' };
         }
+        // Tự động dọn dẹp các task bị treo quá 15 phút (stale running tasks)
+        db.cleanupStaleRunningTasks(15);
         const running = db.getRunningTasks();
         if (running.length > 0) {
             console.log(`[TaskService] [AutoProcess] Hiện có ${running.length} task đang chạy (${running[0].id} - ${running[0].title}), chưa kích hoạt task tiếp theo.`);
@@ -383,11 +393,11 @@ export class TaskService {
         if (result.success && result.task) {
             const voiceMsg = result.task.startVoiceText ||
                 nextTask.startVoiceText ||
-                `Dạ em tự động chuyển sang xử lý task tiếp theo: ${nextTask.title}`;
+                `Dạ em tự động chuyển sang xử lý task tiếp theo: ${result.task.title}`;
             if (this.wsBroadcaster) {
                 this.wsBroadcaster('auto_process_task_started', {
-                    taskId: nextTask.id,
-                    title: nextTask.title,
+                    taskId: result.task.id,
+                    title: result.task.title,
                     ttsVoiceText: voiceMsg
                 });
             }

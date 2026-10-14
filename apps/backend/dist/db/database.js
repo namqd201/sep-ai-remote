@@ -12,6 +12,7 @@ export class AppDatabase {
         }
         this.db = new DatabaseSync(path.resolve(config.databaseFile));
         this.initTables();
+        this.cleanupOrphanedTasksOnStartup();
     }
     initTables() {
         this.db.exec(`
@@ -177,6 +178,36 @@ export class AppDatabase {
     `);
         const rows = stmt.all();
         return rows.map((r) => this.mapTask(r));
+    }
+    cleanupOrphanedTasksOnStartup() {
+        const stmt = this.db.prepare(`
+      UPDATE tasks 
+      SET status = 'FAILED', 
+          updated_at = ?,
+          current_action = 'Đã hủy do server khởi động lại'
+      WHERE status IN ('RUNNING', 'DISPATCHED')
+    `);
+        const now = getVietnamNowIso();
+        const result = stmt.run(now);
+        if (result.changes > 0) {
+            console.log(`[Database] Đã giải phóng ${result.changes} task bị treo từ phiên trước khi khởi động.`);
+        }
+    }
+    cleanupStaleRunningTasks(maxAgeMinutes = 20) {
+        const cutoffTime = new Date(Date.now() - maxAgeMinutes * 60 * 1000).toISOString();
+        const stmt = this.db.prepare(`
+      UPDATE tasks 
+      SET status = 'FAILED', 
+          updated_at = ?,
+          current_action = 'Đã hủy vì quá hạn (${maxAgeMinutes} phút không phản hồi)'
+      WHERE status IN ('RUNNING', 'DISPATCHED') AND updated_at < ?
+    `);
+        const now = getVietnamNowIso();
+        const result = stmt.run(now, cutoffTime);
+        if (result.changes > 0) {
+            console.log(`[Database] Đã dọn dẹp ${result.changes} task bị kẹt quá ${maxAgeMinutes} phút.`);
+        }
+        return Number(result.changes);
     }
     getTask(id) {
         const stmt = this.db.prepare(`SELECT * FROM tasks WHERE id = ?`);

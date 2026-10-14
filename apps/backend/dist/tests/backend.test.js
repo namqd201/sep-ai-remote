@@ -18,6 +18,7 @@ describe('Sếp AI Remote Backend Test Suite', () => {
         await new Promise((resolve) => server.listen(testPort, resolve));
     });
     after(() => {
+        db.cleanupOrphanedTasksOnStartup();
         server.close();
     });
     test('1. Xác thực thiết bị: Ghép đôi sai mã phải bị từ chối', async () => {
