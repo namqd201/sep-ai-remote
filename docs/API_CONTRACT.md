@@ -65,9 +65,9 @@
   {
     "sessions": [
       {
-        "sessionId": "44939315-00af-4786-86be-c0e8740762a9",
+        "sessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "title": "Sếp AI Remote Architecture Design",
-        "workspacePath": "F:/Project/sep-ai-remote",
+        "workspacePath": "C:/Projects/my-app",
         "status": "RUNNING", // "RUNNING" | "IDLE" | "ERROR"
         "isNotFullyIdle": true,
         "lastModified": "2026-10-13T16:22:15.000Z",
@@ -108,7 +108,7 @@
   {
     "idempotencyKey": "uuid-v4-client-generated",
     "prompt": "Em kiểm tra lại build và chạy test",
-    "sessionId": "44939315-00af-4786-86be-c0e8740762a9", // Phiên chỉ định hoặc để trống để tạo mới
+    "sessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", // Phiên chỉ định hoặc để trống để tạo mới
     "createNewSession": false,
     "modelTier": "flash", // "flash" | "pro" | "flash_lite"
     "title": "Kiểm tra build & test"

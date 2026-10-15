@@ -1,5 +1,5 @@
 param(
-    [string]$OutputPath = "f:\Project\sep-ai-remote\apps\backend\public\uploads\pc_screen.png"
+    [string]$OutputPath = "$PSScriptRoot\..\apps\backend\public\uploads\pc_screen.png"
 )
 
 Add-Type -AssemblyName System.Windows.Forms

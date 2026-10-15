@@ -24,6 +24,19 @@ export class TelegramService {
     return db.getSetting('telegram_chat_id') || process.env.TELEGRAM_CHAT_ID;
   }
 
+  private getWebAppUrl(): string {
+    if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL;
+    if (process.env.NGROK_DOMAIN) return `https://${process.env.NGROK_DOMAIN}`;
+    const urlFile = path.resolve(process.cwd(), 'apps/backend/public/https_url.txt');
+    if (fs.existsSync(urlFile)) {
+      try {
+        const u = fs.readFileSync(urlFile, 'utf-8').trim();
+        if (u) return u;
+      } catch (_) {}
+    }
+    return 'http://localhost:3000';
+  }
+
   /**
    * Khởi động vòng lặp Long Polling nhận tin nhắn từ Telegram Bot
    */
@@ -180,7 +193,7 @@ export class TelegramService {
           ],
           [
             { text: '💤 Cho PC đi ngủ', callback_data: 'sleep_pc' },
-            { text: '🌐 Mở Web App', url: 'https://padding-shifting-useable.ngrok-free.dev' }
+            { text: '🌐 Mở Web App', url: this.getWebAppUrl() }
           ]
         ]
       };
@@ -238,7 +251,7 @@ export class TelegramService {
     const kb = {
       inline_keyboard: [
         [
-          { text: '🌐 Xem tiến độ trực tiếp', url: `https://padding-shifting-useable.ngrok-free.dev` }
+          { text: '🌐 Xem tiến độ trực tiếp', url: this.getWebAppUrl() }
         ]
       ]
     };
@@ -386,7 +399,7 @@ export class TelegramService {
       inline_keyboard: [
         [
           { text: '🔄 Làm mới Quota', callback_data: 'check_quota' },
-          { text: '🌐 Mở Web App', url: 'https://padding-shifting-useable.ngrok-free.dev' }
+          { text: '🌐 Mở Web App', url: this.getWebAppUrl() }
         ]
       ]
     };
@@ -419,7 +432,7 @@ export class TelegramService {
     const kb = {
       inline_keyboard: [
         [
-          { text: '🌐 Mở Web App xem chi tiết', url: 'https://padding-shifting-useable.ngrok-free.dev' }
+          { text: '🌐 Mở Web App xem chi tiết', url: this.getWebAppUrl() }
         ]
       ]
     };

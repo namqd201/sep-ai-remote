@@ -74,14 +74,14 @@ export async function startTunnel() {
 
   // 2. Nếu dùng Ngrok Static Domain vĩnh viễn
   if (provider === 'ngrok') {
-    const ngrokDomain = process.env.NGROK_DOMAIN || 'padding-shifting-useable.ngrok-free.dev';
+    const ngrokDomain = process.env.NGROK_DOMAIN || '';
 
     // Kiểm tra nếu Ngrok đã đang chạy sẵn ở cổng 4040
     try {
       const existingRes = await fetch('http://127.0.0.1:4040/api/tunnels');
       if (existingRes.ok) {
         const data = await existingRes.json();
-        const pubUrl = data.tunnels?.[0]?.public_url || `https://${ngrokDomain}`;
+        const pubUrl = data.tunnels?.[0]?.public_url || (ngrokDomain ? `https://${ngrokDomain}` : 'http://127.0.0.1:3000');
         fs.writeFileSync(urlFilePath, pubUrl);
         console.log('\n========================================================');
         console.log('⭐ LINK NGROK TĨNH VĨNH VIỄN (KHÔNG BAO GIỜ ĐỔI):');
@@ -132,7 +132,7 @@ export async function startTunnel() {
         if (attempts > 15) {
           clearInterval(interval);
           console.warn('[Tunnel] Quá thời gian chờ lấy link từ Ngrok API.');
-          resolve({ url: `https://${ngrokDomain}`, process: ngrokProc });
+          resolve({ url: ngrokDomain ? `https://${ngrokDomain}` : 'http://127.0.0.1:3000', process: ngrokProc });
         }
       }, 1000);
     });

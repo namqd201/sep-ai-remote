@@ -3,7 +3,8 @@ import os
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
-output_path = r'f:\Project\sep-ai-remote\apps\backend\public\uploads\pc_screen.png'
+script_dir = os.path.dirname(os.path.abspath(__file__))
+output_path = os.path.abspath(os.path.join(script_dir, '..', 'apps', 'backend', 'public', 'uploads', 'pc_screen.png'))
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 captured = False

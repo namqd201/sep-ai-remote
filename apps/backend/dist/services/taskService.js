@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
 import { notificationService } from './notificationService.js';
@@ -66,15 +67,17 @@ export class TaskService {
                         att.url = `/uploads/${fileName}`;
                         att.localPath = filePath;
                         // Đồng thời lưu vào thư mục .user_uploaded của Antigravity Brain để agent xem trực tiếp
-                        const targetSession = dto.sessionId || '44939315-00af-4786-86be-c0e8740762a9';
-                        const brainDir = path.join(process.env.USERPROFILE || 'C:\\Users\\PC', '.gemini', 'antigravity', 'brain', targetSession, '.user_uploaded');
-                        if (!fs.existsSync(brainDir)) {
-                            fs.mkdirSync(brainDir, { recursive: true });
+                        const targetSession = dto.sessionId || db.getSetting('antigravity_active_session_id') || '';
+                        if (targetSession) {
+                            const brainDir = path.join(process.env.USERPROFILE || os.homedir(), '.gemini', 'antigravity', 'brain', targetSession, '.user_uploaded');
+                            if (!fs.existsSync(brainDir)) {
+                                fs.mkdirSync(brainDir, { recursive: true });
+                            }
+                            const destPath = path.join(brainDir, fileName);
+                            fs.copyFileSync(filePath, destPath);
+                            att.localPath = destPath;
+                            console.log(`[TaskService] Đã lưu ảnh đính kèm vào Antigravity: ${destPath}`);
                         }
-                        const destPath = path.join(brainDir, fileName);
-                        fs.copyFileSync(filePath, destPath);
-                        att.localPath = destPath;
-                        console.log(`[TaskService] Đã lưu ảnh đính kèm vào Antigravity: ${destPath}`);
                         // Xóa dữ liệu base64 để tối ưu bộ nhớ db
                         delete att.data;
                     }
@@ -529,14 +532,16 @@ export class TaskService {
                         fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
                         att.url = `/uploads/${fileName}`;
                         att.localPath = filePath;
-                        const targetSession = task.sessionId || '44939315-00af-4786-86be-c0e8740762a9';
-                        const brainDir = path.join(process.env.USERPROFILE || 'C:\\Users\\PC', '.gemini', 'antigravity', 'brain', targetSession, '.user_uploaded');
-                        if (!fs.existsSync(brainDir)) {
-                            fs.mkdirSync(brainDir, { recursive: true });
+                        const targetSession = task.sessionId || db.getSetting('antigravity_active_session_id') || '';
+                        if (targetSession) {
+                            const brainDir = path.join(process.env.USERPROFILE || os.homedir(), '.gemini', 'antigravity', 'brain', targetSession, '.user_uploaded');
+                            if (!fs.existsSync(brainDir)) {
+                                fs.mkdirSync(brainDir, { recursive: true });
+                            }
+                            const destPath = path.join(brainDir, fileName);
+                            fs.copyFileSync(filePath, destPath);
+                            att.localPath = destPath;
                         }
-                        const destPath = path.join(brainDir, fileName);
-                        fs.copyFileSync(filePath, destPath);
-                        att.localPath = destPath;
                         delete att.data;
                     }
                     catch (err) {

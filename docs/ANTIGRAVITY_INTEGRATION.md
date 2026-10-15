@@ -2,8 +2,8 @@
 
 **Thời gian khảo sát:** 2026-10-13  
 **Hệ điều hành:** Windows 11 / Windows x64  
-**Workspace hiện tại:** `f:\Project\sep-ai-remote`  
-**Conversation ID hiện tại:** `44939315-00af-4786-86be-c0e8740762a9`  
+**Workspace:** `<workspace_directory>`  
+**Conversation ID:** `<active_conversation_id>`  
 
 ---
 
@@ -15,8 +15,8 @@ Qua kiểm tra hệ thống thực tế trên máy Windows:
 - **Python:** `Python 3.13.9`
 - **Java:** `Java 21 LTS` (Java SE Runtime Environment 21.0.12)
 - **Flutter / Android SDK:** Chưa có sẵn trên `PATH` toàn cục của máy chủ Windows này. Ứng dụng Flutter sẽ được phát triển đầy đủ theo chuẩn cấu trúc cross-platform (Android & iOS) tại `apps/mobile/`, đi kèm hướng dẫn build, đồng thời cung cấp giao diện Mobile Web PWA chạy trực tiếp trên điện thoại qua mạng LAN để kiểm thử ngay lập tức.
-- **Antigravity Host Process:** Đang chạy tại `C:\Users\PC\AppData\Local\Programs\antigravity\Antigravity.exe` (Antigravity 2.0 Desktop Electron).
-- **Antigravity Language Server:** Đang chạy tại `C:\Users\PC\AppData\Local\Programs\antigravity\resources\bin\language_server.exe` (PID 33688, cổng nội bộ `127.0.0.1:60905`, `127.0.0.1:60906`).
+- **Antigravity Host Process:** Đang chạy tại `%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe` (Antigravity 2.0 Desktop Electron).
+- **Antigravity Language Server:** Đang chạy tại `%LOCALAPPDATA%\Programs\antigravity\resources\bin\language_server.exe`.
 
 ---
 
@@ -26,30 +26,30 @@ Qua kiểm tra hệ thống thực tế trên máy Windows:
 
 1. **Gửi prompt vào phiên agent đang mở (`sendMessageToSession`):**
    - **Cơ chế xác minh:** Công cụ CLI chính thức `agentapi.bat` đặt tại:  
-     `C:\Users\PC\.gemini\antigravity\bin\agentapi.bat`  
+     `%USERPROFILE%\.gemini\antigravity\bin\agentapi.bat`  
      (Ủy quyền trực tiếp vào `language_server.exe agentapi`).
    - **Lệnh thực thi:**
      ```cmd
-     "C:\Users\PC\.gemini\antigravity\bin\agentapi.bat" send-message [--title="<Tiêu đề>"] <recipient_conversation_id> "<Nội dung>"
+     "%USERPROFILE%\.gemini\antigravity\bin\agentapi.bat" send-message [--title="<Tiêu đề>"] <recipient_conversation_id> "<Nội dung>"
      ```
    - **Khả năng:** Gửi message/prompt trực tiếp vào conversation ID đang mở hoặc gửi cho chính phiên agent để kích hoạt reactive wakeup và tiếp tục xử lý.
 
 2. **Khởi tạo phiên agent mới (`createNewSession`):**
    - **Lệnh thực thi:**
      ```cmd
-     "C:\Users\PC\.gemini\antigravity\bin\agentapi.bat" new-conversation [--model=<flash_lite|flash|pro>] [--title="<Tiêu đề>"] "<Prompt>"
+     "%USERPROFILE%\.gemini\antigravity\bin\agentapi.bat" new-conversation [--model=<flash_lite|flash|pro>] [--title="<Tiêu đề>"] "<Prompt>"
      ```
    - **Khả năng:** Cho phép giao việc mới từ điện thoại với việc chỉ định model tier (flash, flash_lite, pro) và title task.
 
 3. **Lấy metadata của phiên agent (`getConversationMetadata`):**
    - **Lệnh thực thi:**
      ```cmd
-     "C:\Users\PC\.gemini\antigravity\bin\agentapi.bat" get-conversation-metadata <conversation_id>
+     "%USERPROFILE%\.gemini\antigravity\bin\agentapi.bat" get-conversation-metadata <conversation_id>
      ```
-   - **Khả năng:** Trả về JSON chứa `rootConversationId`, `workspaces` (đường dẫn tuyệt đối `workspaceFolderAbsoluteUri`), `projectId`, `createdAt`. Đã kiểm thử thành công trên chính session hiện tại (`44939315-00af-4786-86be-c0e8740762a9`).
+   - **Khả năng:** Trả về JSON chứa `rootConversationId`, `workspaces` (đường dẫn tuyệt đối `workspaceFolderAbsoluteUri`), `projectId`, `createdAt`.
 
 4. **Bắt sự kiện vòng đời qua Lifecycle Hooks (`hooks.json`):**
-   - **Tài liệu nguồn:** `C:\Users\PC\.gemini\antigravity\builtin\skills\agy-customizations\docs\hooks.md`
+   - **Tài liệu nguồn:** `%USERPROFILE%\.gemini\antigravity\builtin\skills\agy-customizations\docs\hooks.md`
    - **Cấu hình:** Đặt tại `.agents/hooks.json` hoặc thư mục customization của Antigravity.
    - **Sự kiện hỗ trợ:**
      - `Stop`: Kích hoạt khi agent kết thúc lượt làm việc (`model_stop`, `max_steps_exceeded`, `error`). Cung cấp `conversationId`, `fullyIdle`, `terminationReason`, `error`, `transcriptPath`, `artifactDirectoryPath`.

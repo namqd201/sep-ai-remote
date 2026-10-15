@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const appData = process.env.APPDATA || path.join(process.env.USERPROFILE || 'C:\\Users\\PC', 'AppData', 'Roaming');
+const appData = process.env.APPDATA || path.join(process.env.USERPROFILE || os.homedir(), 'AppData', 'Roaming');
 const startupDir = path.join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
 const startupFilePath = path.join(startupDir, 'SepAiRemote_AutoStart.vbs');
 

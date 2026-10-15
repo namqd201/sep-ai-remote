@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import {
   AntigravityQuotaSummary,
@@ -16,8 +17,16 @@ const cacheFilePath = path.resolve(__dirname, '../../../data/quota_cache.json');
 export class AntigravityQuotaService {
   private static instance: AntigravityQuotaService;
   private cachedQuota: AntigravityQuotaSummary | null = null;
-  private devToolsActivePortPath = 'C:/Users/PC/AppData/Roaming/Antigravity/DevToolsActivePort';
-  private appStoragePath = 'C:/Users/PC/AppData/Roaming/Antigravity/app_storage.json';
+  private devToolsActivePortPath = path.join(
+    process.env.APPDATA || path.join(process.env.USERPROFILE || os.homedir(), 'AppData', 'Roaming'),
+    'Antigravity',
+    'DevToolsActivePort'
+  );
+  private appStoragePath = path.join(
+    process.env.APPDATA || path.join(process.env.USERPROFILE || os.homedir(), 'AppData', 'Roaming'),
+    'Antigravity',
+    'app_storage.json'
+  );
   private isFetching = false;
 
   private constructor() {
@@ -59,7 +68,7 @@ export class AntigravityQuotaService {
         }
       }
     } catch (_) {}
-    return 'wwyhhha@gmail.com';
+    return '';
   }
 
   private formatResetTime(epochSeconds?: number): string {
