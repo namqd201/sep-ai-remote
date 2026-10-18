@@ -3,6 +3,7 @@ import os from 'node:os';
 import { config } from '../config.js';
 import { antigravityAdapter } from '../adapter/AntigravityAdapter.js';
 import { antigravityQuotaService } from '../adapter/AntigravityQuotaService.js';
+import { remoteControlService } from '../adapter/RemoteControlService.js';
 import { taskQueue } from '../queue/TaskQueue.js';
 import {
   WsEventType,
@@ -12,7 +13,9 @@ import {
   TaskEvent,
   DeviceType,
   PairResponse,
-  AntigravityQuotaSummary
+  AntigravityQuotaSummary,
+  ScreenStreamConfig,
+  RemoteInputPayload
 } from '@sep-ai/shared';
 
 export class AgentBridge {
@@ -51,6 +54,17 @@ export class AgentBridge {
         payload: event,
         timestamp: new Date().toISOString()
       });
+    });
+
+    // Chuyển tiếp luồng frame màn hình từ RemoteControlService lên backend
+    remoteControlService.subscribeFrames((frame) => {
+      if (this.isConnected) {
+        this.sendWsMessage({
+          event: WsEventType.SCREEN_FRAME,
+          payload: frame,
+          timestamp: new Date().toISOString()
+        });
+      }
     });
 
     await this.connectWithRetry();
@@ -181,6 +195,25 @@ export class AgentBridge {
         break;
       }
 
+      case WsEventType.START_SCREEN_STREAM: {
+        const cfg = msg.payload as ScreenStreamConfig;
+        console.log('[Bridge] Bắt đầu stream màn hình theo yêu cầu từ Server...');
+        remoteControlService.startStream(cfg);
+        break;
+      }
+
+      case WsEventType.STOP_SCREEN_STREAM: {
+        console.log('[Bridge] Dừng stream màn hình theo yêu cầu từ Server.');
+        remoteControlService.stopStream();
+        break;
+      }
+
+      case WsEventType.REMOTE_INPUT: {
+        const input = msg.payload as RemoteInputPayload;
+        remoteControlService.sendInput(input);
+        break;
+      }
+
       case WsEventType.PING: {
         this.sendWsMessage({
           event: WsEventType.PONG,
@@ -208,6 +241,7 @@ export class AgentBridge {
 
   private cleanup(): void {
     this.isConnected = false;
+    remoteControlService.stopStream();
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     if (this.syncTimer) clearInterval(this.syncTimer);
     if (this.quotaTimer) clearInterval(this.quotaTimer);

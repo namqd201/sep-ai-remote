@@ -31,5 +31,10 @@ var WsEventType;
     // Quota & Usage Events
     WsEventType["QUOTA_UPDATED"] = "quota_updated";
     WsEventType["GET_QUOTA"] = "get_quota";
+    // Remote Screen & Desktop Control Events
+    WsEventType["START_SCREEN_STREAM"] = "start_screen_stream";
+    WsEventType["STOP_SCREEN_STREAM"] = "stop_screen_stream";
+    WsEventType["SCREEN_FRAME"] = "screen_frame";
+    WsEventType["REMOTE_INPUT"] = "remote_input";
 })(WsEventType || (exports.WsEventType = WsEventType = {}));
 //# sourceMappingURL=websocket.js.map

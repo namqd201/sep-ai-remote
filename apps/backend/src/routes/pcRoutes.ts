@@ -139,4 +139,10 @@ router.post('/restart', authService.authenticateMiddleware, (_req, res) => {
   }
 });
 
+// Gửi thao tác điều khiển chuột & phím từ xa
+router.post('/remote/input', authService.authenticateMiddleware, (req, res) => {
+  const sent = wsGateway.sendRemoteInput(req.body);
+  res.json({ success: sent });
+});
+
 export default router;

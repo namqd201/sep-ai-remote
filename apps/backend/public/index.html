@@ -252,6 +252,26 @@
       box-shadow: 0 4px 15px rgba(37, 99, 235, 0.5);
     }
 
+    .virtual-key-btn {
+      background: var(--surface-light);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #E2E8F0;
+      font-size: 0.74rem;
+      font-weight: 500;
+      padding: 6px 9px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      flex: 1 1 auto;
+      text-align: center;
+      min-width: 48px;
+    }
+    .virtual-key-btn:active {
+      background: var(--accent);
+      color: #fff;
+      transform: scale(0.95);
+    }
+
     /* Modal Sheet */
     .modal-overlay {
       position: fixed;
@@ -1040,6 +1060,18 @@
         </div>
       </div>
 
+      <!-- Quick Remote Desktop Card -->
+      <div class="card" onclick="switchTab('remote')" style="cursor: pointer; margin-bottom: 12px; padding: 12px 14px; background: linear-gradient(135deg, rgba(37,99,235,0.25) 0%, rgba(16,185,129,0.18) 100%); border: 1.5px solid rgba(59,130,246,0.45); display: flex; align-items: center; justify-content: space-between; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.25);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">🖥️</div>
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; color: #F8FAFC;">Xem & Điều khiển Màn hình PC</div>
+            <div style="font-size: 0.74rem; color: #94A3B8; margin-top: 2px;">Share màn hình trực tiếp và điều khiển chuột, gõ phím từ xa</div>
+          </div>
+        </div>
+        <span style="font-size: 1.2rem; color: var(--accent); margin-left: 8px;">➔</span>
+      </div>
+
       <!-- Quick PC Remote Actions Grid -->
       <div id="pc-power-bar" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
         <button class="btn" onclick="confirmLockPC()" style="padding: 8px 10px; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93C5FD; display: flex; align-items: center; justify-content: center; gap: 6px;">
@@ -1265,6 +1297,112 @@
 
       <div id="all-tasks-container">
         <!-- Render tasks -->
+      </div>
+    </div>
+
+    <!-- TAB: MÀN HÌNH PC & ĐIỀU KHIỂN TỪ XA (REMOTE DESKTOP) -->
+    <div id="tab-remote" class="tab-pane">
+      <!-- Header Controls -->
+      <div class="card" style="margin-bottom: 10px; padding: 10px 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="remote-live-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #EF4444; display: inline-block;"></span>
+            <span style="font-weight: 700; font-size: 0.95rem;">Màn hình PC</span>
+            <span id="remote-fps-badge" class="badge" style="font-size: 0.7rem; background: rgba(59,130,246,0.2); color: #60A5FA;">Tạm dừng</span>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="remote-stream-toggle-btn" class="btn" onclick="toggleRemoteStream()" style="width: auto; padding: 4px 10px; font-size: 0.75rem; background: var(--accent);">
+              ▶️ Xem trực tiếp
+            </button>
+            <button class="btn" onclick="toggleRemoteFullscreen()" style="width: auto; padding: 4px 8px; font-size: 0.75rem; background: var(--surface-light); border: 1px solid var(--border);" title="Toàn màn hình">
+              ⛶
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode & Quality Selector -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.75rem;">
+          <div>
+            <label style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 2px;">Chế độ điều khiển:</label>
+            <select id="remote-input-mode" class="input-field" style="margin-bottom: 0; padding: 5px 8px; font-size: 0.76rem;" onchange="setRemoteInputMode(this.value)">
+              <option value="touch">👆 Chạm trực tiếp (Direct Click)</option>
+              <option value="trackpad">🖱️ Bàn rê chuột (Trackpad)</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-bottom: 2px;">Chất lượng / Tốc độ:</label>
+            <select id="remote-quality-mode" class="input-field" style="margin-bottom: 0; padding: 5px 8px; font-size: 0.76rem;" onchange="setRemoteQuality(this.value)">
+              <option value="normal" selected>⚡ Chuẩn (720p • 15 FPS)</option>
+              <option value="eco">📶 4G Tiết kiệm (540p • 10 FPS)</option>
+              <option value="hd">💎 Sắc nét Wi-Fi (1080p • 20 FPS)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas Screen Viewport -->
+      <div id="remote-screen-container" style="position: relative; width: 100%; background: #0B0F17; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.5); min-height: 220px; display: flex; align-items: center; justify-content: center;">
+        <canvas id="remote-screen-canvas" style="display: block; width: 100%; height: auto; touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none;"></canvas>
+
+        <!-- Placeholder when paused / connecting -->
+        <div id="remote-placeholder" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(11,15,23,0.92); color: var(--text-muted); padding: 20px; text-align: center; z-index: 4;">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">🖥️</div>
+          <div style="font-size: 0.9rem; font-weight: 600; color: #F1F5F9; margin-bottom: 4px;">Màn hình PC từ xa</div>
+          <div id="remote-status-text" style="font-size: 0.78rem; color: #94A3B8; margin-bottom: 12px;">Bấm nút bên dưới để xem trực tiếp và điều khiển máy tính</div>
+          <button class="btn" onclick="toggleRemoteStream(true)" style="width: auto; padding: 6px 18px; font-size: 0.85rem; background: var(--accent);">
+            ▶️ Bật Màn hình
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Trackpad & Mouse Buttons Row -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px;">
+        <button class="btn" onclick="sendQuickClick('left')" style="padding: 8px 4px; font-size: 0.72rem; background: var(--surface-light); border: 1px solid var(--border);">
+          🖱️ Click Trái
+        </button>
+        <button class="btn" onclick="sendQuickClick('right')" style="padding: 8px 4px; font-size: 0.72rem; background: var(--surface-light); border: 1px solid var(--border);">
+          🖱️ Click Phải
+        </button>
+        <button class="btn" onclick="sendQuickClick('double')" style="padding: 8px 4px; font-size: 0.72rem; background: var(--surface-light); border: 1px solid var(--border);">
+          2x Click
+        </button>
+        <button class="btn" onclick="sendScroll(150)" style="padding: 8px 4px; font-size: 0.72rem; background: var(--surface-light); border: 1px solid var(--border);">
+          ▲ Cuộn lên
+        </button>
+        <button class="btn" onclick="sendScroll(-150)" style="padding: 8px 4px; font-size: 0.72rem; background: var(--surface-light); border: 1px solid var(--border);">
+          ▼ Cuộn xuống
+        </button>
+      </div>
+
+      <!-- Keyboard & Special Keys Toolbars -->
+      <div class="card" style="margin-top: 8px; padding: 10px 12px;">
+        <!-- Text Input Row -->
+        <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+          <input type="text" id="remote-text-input" class="input-field" style="margin-bottom: 0; flex: 1; font-size: 0.82rem; padding: 8px 10px;" placeholder="Gõ văn bản / tiếng Việt để gửi vào PC..." onkeypress="if(event.key==='Enter') sendRemoteText()">
+          <button class="btn" onclick="sendRemoteText()" style="width: auto; padding: 0 14px; font-size: 0.8rem; background: #10B981;">
+            Gửi chữ
+          </button>
+        </div>
+
+        <!-- Virtual Key Buttons -->
+        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Win')">⊞ Win</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Enter')">↵ Enter</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Esc')">Esc</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Tab')">⇥ Tab</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Backspace')">⌫ Back</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Alt+Tab')">🗔 Alt+Tab</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Ctrl+C')">📋 Copy</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Ctrl+V')">📋 Paste</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Ctrl+Z')">↩️ Undo</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Ctrl+S')">💾 Save</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Win+D')">🖥️ Desktop</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Up')">▲</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Down')">▼</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Left')">◄</button>
+          <button class="virtual-key-btn" onclick="sendRemoteKey('Right')">►</button>
+          <button class="virtual-key-btn" onclick="lockPc()" style="color: #F87171; border-color: rgba(239,68,68,0.3);">🔒 Khóa PC</button>
+        </div>
       </div>
     </div>
 
@@ -1546,6 +1684,10 @@
     <button class="nav-btn" onclick="switchTab('tasks')">
       <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
       Công việc
+    </button>
+    <button class="nav-btn" onclick="switchTab('remote')">
+      <svg viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg>
+      Màn hình
     </button>
     <div class="nav-btn nav-center-mic" onclick="openVoiceModal()">
       <div class="mic-circle">🎙️</div>
@@ -2431,12 +2573,17 @@
     document.getElementById(`tab-${tabId}`).classList.add('active');
 
     const btn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.innerText.toLowerCase().includes(
-      tabId === 'dashboard' ? 'tổng quan' : tabId === 'tasks' ? 'công việc' : tabId === 'chat' ? 'hội thoại' : 'cài đặt'
+      tabId === 'dashboard' ? 'tổng quan' : tabId === 'tasks' ? 'công việc' : tabId === 'remote' ? 'màn hình' : tabId === 'chat' ? 'hội thoại' : 'cài đặt'
     ));
     if (btn) btn.classList.add('active');
     if (tabId === 'settings') {
       loadVoiceSettings();
       fetchSettings();
+    }
+    if (tabId === 'remote') {
+      startRemoteStream();
+    } else {
+      stopRemoteStream();
     }
   }
 
@@ -2594,6 +2741,8 @@
     } else if (msg.event === 'quota_updated') {
       state.quota = msg.payload;
       renderQuotaUi();
+    } else if (msg.event === 'screen_frame') {
+      handleRemoteScreenFrame(msg.payload);
     }
   }
 
@@ -4792,9 +4941,348 @@
     }, 800);
   }
 
+  // =========================================================================
+  // CHỨC NĂNG SHARE MÀN HÌNH & ĐIỀU KHIỂN PC TỪ XA (REMOTE DESKTOP)
+  // =========================================================================
+  const remoteState = {
+    isStreaming: false,
+    mode: 'touch', // 'touch' (Direct Click) or 'trackpad'
+    quality: 'normal', // 'eco', 'normal', 'hd'
+    fps: 0,
+    fpsCount: 0,
+    fpsTimer: null,
+    cursorX: 0.5,
+    cursorY: 0.5,
+    canvasW: 1280,
+    canvasH: 720,
+    touchStartX: 0,
+    touchStartY: 0,
+    touchStartTime: 0,
+    isTouchMoved: false,
+    longPressTimer: null
+  };
+
+  function getStreamConfig() {
+    if (remoteState.quality === 'eco') {
+      return { scale: 0.5, fps: 10, quality: 50 };
+    } else if (remoteState.quality === 'hd') {
+      return { scale: 0.85, fps: 20, quality: 75 };
+    }
+    return { scale: 0.67, fps: 15, quality: 60 };
+  }
+
+  function startRemoteStream() {
+    if (remoteState.isStreaming) return;
+    remoteState.isStreaming = true;
+    const toggleBtn = document.getElementById('remote-stream-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.textContent = '⏸️ Tạm dừng';
+      toggleBtn.style.background = '#EF4444';
+    }
+    const ph = document.getElementById('remote-placeholder');
+    if (ph) ph.style.display = 'flex';
+    const st = document.getElementById('remote-status-text');
+    if (st) st.textContent = 'Đang kết nối luồng màn hình trực tiếp...';
+
+    const cfg = getStreamConfig();
+    sendWsMessage('start_screen_stream', cfg);
+
+    if (!remoteState.fpsTimer) {
+      remoteState.fpsTimer = setInterval(updateRemoteFpsCounter, 1000);
+    }
+  }
+
+  function stopRemoteStream() {
+    if (!remoteState.isStreaming) return;
+    remoteState.isStreaming = false;
+    const toggleBtn = document.getElementById('remote-stream-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.textContent = '▶️ Xem trực tiếp';
+      toggleBtn.style.background = 'var(--accent)';
+    }
+    const dot = document.getElementById('remote-live-dot');
+    if (dot) dot.style.background = '#EF4444';
+    const badge = document.getElementById('remote-fps-badge');
+    if (badge) badge.textContent = 'Tạm dừng';
+    const ph = document.getElementById('remote-placeholder');
+    if (ph) ph.style.display = 'flex';
+    const st = document.getElementById('remote-status-text');
+    if (st) st.textContent = 'Luồng màn hình đang tạm dừng để tiết kiệm dữ liệu';
+
+    sendWsMessage('stop_screen_stream', {});
+
+    if (remoteState.fpsTimer) {
+      clearInterval(remoteState.fpsTimer);
+      remoteState.fpsTimer = null;
+    }
+  }
+
+  function toggleRemoteStream(forceStart) {
+    if (forceStart === true || !remoteState.isStreaming) {
+      startRemoteStream();
+    } else {
+      stopRemoteStream();
+    }
+  }
+
+  function setRemoteQuality(val) {
+    remoteState.quality = val;
+    if (remoteState.isStreaming) {
+      sendWsMessage('start_screen_stream', getStreamConfig());
+    }
+  }
+
+  function setRemoteInputMode(val) {
+    remoteState.mode = val;
+    const cursor = document.getElementById('remote-virtual-cursor');
+    if (cursor) {
+      cursor.style.display = val === 'trackpad' ? 'block' : 'none';
+    }
+  }
+
+  function toggleRemoteFullscreen() {
+    const el = document.getElementById('remote-screen-container');
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      if (el.requestFullscreen) {
+        el.requestFullscreen();
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }
+
+  function updateRemoteFpsCounter() {
+    if (remoteState.isStreaming) {
+      remoteState.fps = remoteState.fpsCount;
+      remoteState.fpsCount = 0;
+      const badge = document.getElementById('remote-fps-badge');
+      if (badge) {
+        badge.textContent = `${remoteState.canvasW}x${remoteState.canvasH} • ${remoteState.fps} FPS`;
+      }
+    }
+  }
+
+  function handleRemoteScreenFrame(payload) {
+    if (!remoteState.isStreaming || !payload || !payload.frame) return;
+    const { frame, width, height } = payload;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('remote-screen-canvas');
+      if (!canvas) return;
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        remoteState.canvasW = width;
+        remoteState.canvasH = height;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Vẽ con trỏ ảo trên canvas nếu ở Trackpad mode
+      if (remoteState.mode === 'trackpad') {
+        const cx = remoteState.cursorX * width;
+        const cy = remoteState.cursorY * height;
+        ctx.fillStyle = '#EF4444';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const cursorEl = document.getElementById('remote-virtual-cursor');
+        if (cursorEl) {
+          cursorEl.style.left = `${remoteState.cursorX * 100}%`;
+          cursorEl.style.top = `${remoteState.cursorY * 100}%`;
+        }
+      }
+
+      remoteState.fpsCount++;
+      const ph = document.getElementById('remote-placeholder');
+      if (ph) ph.style.display = 'none';
+      const dot = document.getElementById('remote-live-dot');
+      if (dot) dot.style.background = '#10B981';
+    };
+    img.src = 'data:image/jpeg;base64,' + frame;
+  }
+
+  function sendRemoteInput(payload) {
+    sendWsMessage('remote_input', payload);
+  }
+
+  function sendQuickClick(button) {
+    sendRemoteInput({
+      action: 'mouse_click',
+      button: button,
+      x: remoteState.cursorX,
+      y: remoteState.cursorY
+    });
+    if (navigator.vibrate) navigator.vibrate(30);
+  }
+
+  function sendScroll(delta) {
+    sendRemoteInput({
+      action: 'mouse_scroll',
+      delta: delta,
+      x: remoteState.cursorX,
+      y: remoteState.cursorY
+    });
+  }
+
+  function sendRemoteKey(key) {
+    sendRemoteInput({
+      action: 'key_press',
+      key: key
+    });
+    if (navigator.vibrate) navigator.vibrate(30);
+  }
+
+  function sendRemoteText() {
+    const input = document.getElementById('remote-text-input');
+    const text = (input ? input.value : '').trim();
+    if (!text) return;
+    sendRemoteInput({
+      action: 'type_text',
+      text: text
+    });
+    if (input) input.value = '';
+    showVoiceToast('ĐIỀU KHIỂN PC', `Đã gửi văn bản vào máy tính: "${text}"`);
+    if (navigator.vibrate) navigator.vibrate(40);
+  }
+
+  function lockPc() {
+    confirmLockPC();
+  }
+
+  function initRemoteCanvasEvents() {
+    const canvas = document.getElementById('remote-screen-canvas');
+    if (!canvas) return;
+
+    let touchCount = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      touchCount = e.touches.length;
+      const t = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const normX = Math.max(0, Math.min(1, (t.clientX - rect.left) / rect.width));
+      const normY = Math.max(0, Math.min(1, (t.clientY - rect.top) / rect.height));
+
+      remoteState.touchStartX = t.clientX;
+      remoteState.touchStartY = t.clientY;
+      remoteState.touchStartTime = Date.now();
+      remoteState.isTouchMoved = false;
+
+      if (touchCount === 1) {
+        if (remoteState.mode === 'touch') {
+          remoteState.cursorX = normX;
+          remoteState.cursorY = normY;
+          remoteState.longPressTimer = setTimeout(() => {
+            sendRemoteInput({ action: 'mouse_click', button: 'right', x: normX, y: normY });
+            if (navigator.vibrate) navigator.vibrate(60);
+            remoteState.longPressTimer = null;
+          }, 550);
+        }
+      } else if (touchCount === 2) {
+        if (remoteState.longPressTimer) {
+          clearTimeout(remoteState.longPressTimer);
+          remoteState.longPressTimer = null;
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const dx = t.clientX - remoteState.touchStartX;
+      const dy = t.clientY - remoteState.touchStartY;
+
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+        remoteState.isTouchMoved = true;
+        if (remoteState.longPressTimer) {
+          clearTimeout(remoteState.longPressTimer);
+          remoteState.longPressTimer = null;
+        }
+      }
+
+      if (e.touches.length === 1) {
+        if (remoteState.mode === 'touch') {
+          const normX = Math.max(0, Math.min(1, (t.clientX - rect.left) / rect.width));
+          const normY = Math.max(0, Math.min(1, (t.clientY - rect.top) / rect.height));
+          remoteState.cursorX = normX;
+          remoteState.cursorY = normY;
+          sendRemoteInput({ action: 'mouse_move', x: normX, y: normY });
+        } else {
+          const sens = 1.35;
+          remoteState.cursorX = Math.max(0, Math.min(1, remoteState.cursorX + (dx / rect.width) * sens));
+          remoteState.cursorY = Math.max(0, Math.min(1, remoteState.cursorY + (dy / rect.height) * sens));
+          remoteState.touchStartX = t.clientX;
+          remoteState.touchStartY = t.clientY;
+          sendRemoteInput({ action: 'mouse_move', x: remoteState.cursorX, y: remoteState.cursorY });
+
+          const cursorEl = document.getElementById('remote-virtual-cursor');
+          if (cursorEl) {
+            cursorEl.style.left = `${remoteState.cursorX * 100}%`;
+            cursorEl.style.top = `${remoteState.cursorY * 100}%`;
+          }
+        }
+      } else if (e.touches.length === 2) {
+        const scrollDelta = dy > 0 ? 100 : -100;
+        sendRemoteInput({ action: 'mouse_scroll', delta: scrollDelta });
+        remoteState.touchStartY = t.clientY;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (remoteState.longPressTimer) {
+        clearTimeout(remoteState.longPressTimer);
+        remoteState.longPressTimer = null;
+      }
+
+      const elapsed = Date.now() - remoteState.touchStartTime;
+      if (!remoteState.isTouchMoved && elapsed < 350) {
+        if (touchCount === 1) {
+          sendRemoteInput({ action: 'mouse_click', button: 'left', x: remoteState.cursorX, y: remoteState.cursorY });
+          if (navigator.vibrate) navigator.vibrate(30);
+        } else if (touchCount === 2) {
+          sendRemoteInput({ action: 'mouse_click', button: 'right', x: remoteState.cursorX, y: remoteState.cursorY });
+          if (navigator.vibrate) navigator.vibrate(50);
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const normX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const normY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      remoteState.cursorX = normX;
+      remoteState.cursorY = normY;
+      sendRemoteInput({ action: 'mouse_click', button: 'left', x: normX, y: normY });
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const normX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const normY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      remoteState.cursorX = normX;
+      remoteState.cursorY = normY;
+      sendRemoteInput({ action: 'mouse_click', button: 'right', x: normX, y: normY });
+    });
+  }
+
   window.addEventListener('load', () => {
     updatePwaBannerVisibility();
     initAuth();
+    initRemoteCanvasEvents();
 
     // Khởi động giám sát sức khỏe PC định kỳ 15s
     fetchPcHealth();

@@ -38,6 +38,7 @@ export class WsGateway {
   private cachedSessions: AgentSessionSummary[] = [];
   private cachedProjectGroups: ProjectGroup[] = [];
   private cachedQuota: AntigravityQuotaSummary | null = null;
+  private screenSubscribers: Set<WebSocket> = new Set();
 
   public init(server: HttpServer): void {
     this.wss = new WebSocketServer({ server, path: '/ws' });
@@ -275,6 +276,55 @@ export class WsGateway {
         }
         break;
       }
+
+      case WsEventType.START_SCREEN_STREAM: {
+        this.screenSubscribers.add(client.ws);
+        console.log(`[WsGateway] Client yêu cầu stream màn hình. Số người xem: ${this.screenSubscribers.size}`);
+        if (this.bridgeSocket && this.bridgeSocket.readyState === WebSocket.OPEN) {
+          this.bridgeSocket.send(JSON.stringify(message));
+        }
+        break;
+      }
+
+      case WsEventType.STOP_SCREEN_STREAM: {
+        this.screenSubscribers.delete(client.ws);
+        console.log(`[WsGateway] Client dừng stream màn hình. Còn lại: ${this.screenSubscribers.size}`);
+        if (this.screenSubscribers.size === 0 && this.bridgeSocket && this.bridgeSocket.readyState === WebSocket.OPEN) {
+          this.bridgeSocket.send(JSON.stringify(message));
+        }
+        break;
+      }
+
+      case WsEventType.SCREEN_FRAME: {
+        if (client.role === UserRole.BRIDGE) {
+          if (this.screenSubscribers.size > 0) {
+            const rawFrame = JSON.stringify(message);
+            for (const subWs of this.screenSubscribers) {
+              if (subWs.readyState === WebSocket.OPEN) {
+                subWs.send(rawFrame);
+              } else {
+                this.screenSubscribers.delete(subWs);
+              }
+            }
+          } else if (this.bridgeSocket && this.bridgeSocket.readyState === WebSocket.OPEN) {
+            this.bridgeSocket.send(
+              JSON.stringify({
+                event: WsEventType.STOP_SCREEN_STREAM,
+                payload: {},
+                timestamp: new Date().toISOString()
+              })
+            );
+          }
+        }
+        break;
+      }
+
+      case WsEventType.REMOTE_INPUT: {
+        if (this.bridgeSocket && this.bridgeSocket.readyState === WebSocket.OPEN) {
+          this.bridgeSocket.send(JSON.stringify(message));
+        }
+        break;
+      }
     }
   }
 
@@ -294,6 +344,17 @@ export class WsGateway {
         payload: this.bridgeStatus,
         timestamp: new Date().toISOString()
       });
+    }
+
+    this.screenSubscribers.delete(ws);
+    if (this.screenSubscribers.size === 0 && this.bridgeSocket && this.bridgeSocket.readyState === WebSocket.OPEN) {
+      this.bridgeSocket.send(
+        JSON.stringify({
+          event: WsEventType.STOP_SCREEN_STREAM,
+          payload: {},
+          timestamp: new Date().toISOString()
+        })
+      );
     }
 
     this.clients.delete(ws);
@@ -366,6 +427,20 @@ export class WsGateway {
       return true;
     }
     return false;
+  }
+
+  public sendRemoteInput(payload: unknown): boolean {
+    if (!this.bridgeSocket || this.bridgeSocket.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+    this.bridgeSocket.send(
+      JSON.stringify({
+        event: WsEventType.REMOTE_INPUT,
+        payload,
+        timestamp: new Date().toISOString()
+      })
+    );
+    return true;
   }
 }
 

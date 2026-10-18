@@ -21,6 +21,7 @@ __exportStar(require("./types/device.js"), exports);
 __exportStar(require("./types/auth.js"), exports);
 __exportStar(require("./types/websocket.js"), exports);
 __exportStar(require("./types/quota.js"), exports);
+__exportStar(require("./types/remoteControl.js"), exports);
 __exportStar(require("./utils/date.js"), exports);
 exports.DEFAULT_TTS_COMPLETION_PHRASE = 'Sếp Nam ơi, em đã làm xong task mà sếp giao rồi. Sếp còn việc gì cần em làm nữa không ạ. Sếp vào kiểm tra task kia nhé.';
 exports.HOOK_SERVER_DEFAULT_PORT = 59123;

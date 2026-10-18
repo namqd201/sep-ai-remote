@@ -35,7 +35,13 @@ export enum WsEventType {
 
   // Quota & Usage Events
   QUOTA_UPDATED = 'quota_updated',
-  GET_QUOTA = 'get_quota'
+  GET_QUOTA = 'get_quota',
+
+  // Remote Screen & Desktop Control Events
+  START_SCREEN_STREAM = 'start_screen_stream',
+  STOP_SCREEN_STREAM = 'stop_screen_stream',
+  SCREEN_FRAME = 'screen_frame',
+  REMOTE_INPUT = 'remote_input'
 }
 
 export interface WsMessage<T = unknown> {

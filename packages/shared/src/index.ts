@@ -4,6 +4,7 @@ export * from './types/device.js';
 export * from './types/auth.js';
 export * from './types/websocket.js';
 export * from './types/quota.js';
+export * from './types/remoteControl.js';
 export * from './utils/date.js';
 
 export const DEFAULT_TTS_COMPLETION_PHRASE =

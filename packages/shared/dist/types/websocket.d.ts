@@ -21,7 +21,11 @@ export declare enum WsEventType {
     CHAT_MESSAGE = "chat_message",
     NOTIFICATION = "notification",
     QUOTA_UPDATED = "quota_updated",
-    GET_QUOTA = "get_quota"
+    GET_QUOTA = "get_quota",
+    START_SCREEN_STREAM = "start_screen_stream",
+    STOP_SCREEN_STREAM = "stop_screen_stream",
+    SCREEN_FRAME = "screen_frame",
+    REMOTE_INPUT = "remote_input"
 }
 export interface WsMessage<T = unknown> {
     event: WsEventType;

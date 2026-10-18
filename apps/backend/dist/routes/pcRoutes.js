@@ -129,5 +129,10 @@ router.post('/restart', authService.authenticateMiddleware, (_req, res) => {
         res.status(400).json({ success: false, error: 'Chỉ hỗ trợ trên hệ điều hành Windows.' });
     }
 });
+// Gửi thao tác điều khiển chuột & phím từ xa
+router.post('/remote/input', authService.authenticateMiddleware, (req, res) => {
+    const sent = wsGateway.sendRemoteInput(req.body);
+    res.json({ success: sent });
+});
 export default router;
 //# sourceMappingURL=pcRoutes.js.map
